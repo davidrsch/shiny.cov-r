@@ -31,11 +31,11 @@ instrument_file <- function(path) {
 
   # Parse with srcref attributes. R attaches one srcref per top-level
   # expression to the parsed expression list itself (not to the individual
-  # elements) -- we look those up positionally and pass each one to
+  # elements). Those srcrefs are looked up positionally and passed to
   # shinycov_trace_calls() as `parent_ref` so it can recurse into the
   # expression and instrument every branch/statement inside it (if/else,
   # nested calls, function bodies, ...), not just the top-level statement.
-  # We deliberately do NOT reattach the srcref onto parsed[[i]] itself:
+  # The srcref is deliberately NOT reattached onto parsed[[i]] itself:
   # trace_calls() expects attr(x, "srcref") (when present) to be a list of
   # per-child srcrefs matching length(x), and a single whole-statement
   # srcref there breaks its internal Map(), since its length never matches

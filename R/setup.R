@@ -14,8 +14,7 @@
 #' @param output_dir Directory for coverage output. Defaults to
 #'   `.shiny.cov/` inside `app_dir`.
 #' @param overwrite_rprofile If `TRUE`, silently overwrite an existing
-#'   `.Rprofile`. Default is `FALSE`.  (Kept for backwards compatibility;
-#'   the primary injection is now the app wrapper.)
+#'   `.Rprofile`. Default is `FALSE`. Kept for backwards compatibility.
 #'
 #' @return Invisibly returns the path to the output directory.
 #'
@@ -160,7 +159,7 @@ setup <- function(
     create_app_wrapper(app_dir, bootstrap_path, "app.R")
   } else if (has_ui_server) {
     create_app_wrapper_ui_server(app_dir, bootstrap_path)
-    has_app_r <- TRUE # we just created app.R
+    has_app_r <- TRUE # app.R was just created
   } else {
     warning("No app.R or ui.R+server.R found in ", app_dir)
   }

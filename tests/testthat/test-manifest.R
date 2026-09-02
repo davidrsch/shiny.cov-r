@@ -47,11 +47,9 @@ test_that("report() errors on non-coverage input", {
   )
 })
 
-# NOTE: UI discovery (formerly walk_ui()/walk_tags() here, walking the
-# server-side R tag tree and pattern-matching hardcoded CSS classes) has
-# moved to inst/js/discover-bindings.js, run against a real, live browser
-# via shiny.cov::AppDriver$discover_manifest() (shinytest2) or
-# cy.shinyCovDiscoverManifest() (Cypress) -- see test-e2e.R for the
+# UI discovery lives in inst/js/discover-bindings.js, run against a real,
+# live browser via shiny.cov::AppDriver$discover_manifest() (shinytest2)
+# or cy.shinyCovDiscoverManifest() (Cypress) -- see test-e2e.R for the
 # browser-based regression test covering this (including the actionButton
-# and custom-widget-binding cases the old CSS-class approach could never
-# have handled). There's no more server-side R function to unit test here.
+# and custom-widget-binding cases a CSS-class approach can't handle).
+# There is no server-side R function to unit test here.

@@ -128,13 +128,12 @@ AppDriver <- R6::R6Class(
     #' @param ... Named input values, e.g. `set_inputs(bins = 20)`.
     #' @param wait_ Passed to `shinytest2::AppDriver$set_inputs()`.
     set_inputs = function(..., wait_ = TRUE) {
-      # NOTE: don't add a `values_` param here and forward it to super$
-      # set_inputs() -- shinytest2::AppDriver$set_inputs() has no such
-      # formal argument, so it gets swept into super's own `...` and
-      # misinterpreted as a request to set a real input literally named
-      # "values_", which then fails with "Unable to find input binding
-      # for element with id values_". Forward only what the real method
-      # actually accepts.
+      # `values_` is deliberately not forwarded to super$set_inputs():
+      # shinytest2::AppDriver$set_inputs() has no such formal argument, so
+      # it would be swept into super's own `...` and misinterpreted as a
+      # real input literally named "values_", then fail with "Unable to
+      # find input binding for element with id values_". Forward only
+      # what the real method accepts.
       #
       # Use rlang::list2(), not base::list(), to build `inputs`: shinytest2's
       # own click(input = "x") is implemented internally as
@@ -343,9 +342,9 @@ AppDriver <- R6::R6Class(
                               name = NULL, transform = NULL) {
       # super$expect_values() returns invisible(content) where `content` is
       # the prettified JSON string it just snapshotted -- not the parsed
-      # list get_values() returns. Parse it ourselves (best-effort; a parse
-      # failure just means no log entries, not an error) to find which
-      # input/output ids were actually captured.
+      # list get_values() returns. Parse it locally (a parse failure just
+      # means no log entries, not an error) to find which input/output ids
+      # were actually captured.
       result <- super$expect_values(
         ..., input = input, output = output, export = export,
         screenshot_args = screenshot_args, name = name, transform = transform

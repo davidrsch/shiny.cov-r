@@ -382,12 +382,11 @@ if ("shiny" %in% loadedNamespaces()) {
   }, error = function(e) NULL)
 }
 
-# Graceful-shutdown hooks (onStop/.Last/reg.finalizer, below) are a
-# best-effort mechanism: they rely on the test framework sending an
-# interrupt/SIGTERM the R process actually handles before giving up and
-# killing it (this is precisely the failure mode behind covr#438 and
-# shinytest2#250 -- a 20s graceful stop() with R_COVR=true does not
-# reliably trigger any of these hooks on every platform/configuration).
+# Graceful-shutdown hooks (onStop/.Last/reg.finalizer, below) are not
+# guaranteed: they fire only when the test framework sends an interrupt or
+# SIGTERM the R process actually handles before giving up and killing it,
+# and the extended grace period R_COVR=true requests does not trigger them
+# reliably on every platform/configuration.
 # Don't depend on shutdown working: periodically flush coverage in the
 # background so an abrupt kill loses at most a couple of seconds of the
 # most recent interaction instead of the entire session's reactive
