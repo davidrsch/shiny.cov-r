@@ -14,9 +14,10 @@ test_that("report() writes a self-contained HTML with per-source line counts", {
   expect_true(file.exists(f))
 
   html <- readLines(f, warn = FALSE)
-  # Per-source gutter annotation is present.
-  expect_true(any(grepl("cypress=", html, fixed = TRUE)))
-  expect_true(any(grepl("shinytest2=", html, fixed = TRUE)))
+  # Per-source annotation is present: a column header in the covr renderer,
+  # a gutter annotation in the no-DT fallback.
+  expect_true(any(grepl("cypress", html, fixed = TRUE)))
+  expect_true(any(grepl("shinytest2", html, fixed = TRUE)))
   # Uncovered lines are highlighted (covr uses "missed"; fallback uses "uncovered").
   expect_true(any(grepl("missed", html, fixed = TRUE)) || any(grepl("uncovered", html, fixed = TRUE)))
 })
@@ -80,8 +81,10 @@ test_that("covr-style report keeps DataTables callback valid (no lost backslashe
   render_report_html_covr(cov, NULL, tmp)
   ln <- grep("files.filter", readLines(tmp, warn = FALSE), value = TRUE)
   frag <- regmatches(ln, regexec("files.filter[^\"]*", ln))[[1]]
-  # The JS selector must keep its escaped quotes; a dropped backslash would
-  # leave '' (empty strings), a JS syntax error that blanks the Files table.
-  expect_false(grepl("''", frag, fixed = TRUE))
+  # The JS selector must keep its escaped quote (backslash-quote): the
+  # serialized form is div[id=\\''. A dropped backslash would leave
+  # div[id='' (an empty string), a JS syntax error that blanks the Files
+  # table.
+  expect_true(grepl("\\\\'", frag))
   expect_true(grepl("\\\\", frag))
 })
