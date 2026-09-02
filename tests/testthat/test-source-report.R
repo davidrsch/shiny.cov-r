@@ -21,7 +21,7 @@ test_that("report() writes a self-contained HTML with per-source line counts", {
   expect_true(any(grepl("missed", html, fixed = TRUE)) || any(grepl("uncovered", html, fixed = TRUE)))
 })
 
-test_that("render_source_table annotates hit counts with per-source breakdown", {
+test_that("render_source_table adds per-source columns with a fixed header", {
   skip_if_not_installed("htmltools")
   full <- list(`/f/app.R` = data.frame(
     line = c(1L, 2L, 3L),
@@ -33,10 +33,14 @@ test_that("render_source_table annotates hit counts with per-source breakdown", 
                     total = c(2L, 0L))
   html <- htmltools::renderTags(
     render_source_table(full, src, c("cypress", "shinytest2")))$html
-  expect_true(grepl("cypress=1 shinytest2=1", html, fixed = TRUE))
-  expect_true(grepl("cypress=0 shinytest2=0", html, fixed = TRUE))
-  # The never-tracked comment line gets no annotation.
-  expect_equal(lengths(regmatches(html, gregexpr("cypress=", html, fixed = TRUE))), 2L)
+  # fixed header with one column per source
+  expect_true(grepl("<thead>", html, fixed = TRUE))
+  expect_true(grepl("<th class=\"source-col\">cypress</th>", html, fixed = TRUE))
+  expect_true(grepl("<th class=\"source-col\">shinytest2</th>", html, fixed = TRUE))
+  expect_true(grepl("<th class=\"coverage\">count</th>", html, fixed = TRUE))
+  # per-source cell values (covered line: 1/1; missed line: 0/0)
+  expect_true(grepl("<td class=\"source-col\">1</td>", html, fixed = TRUE))
+  expect_true(grepl("<td class=\"source-col\">0</td>", html, fixed = TRUE))
 })
 
 test_that("covr-style report keeps DataTables callback valid (no lost backslashes)", {

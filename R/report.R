@@ -106,40 +106,69 @@ render_source_table <- function(full, src, source_cols) {
   has_src <- length(source_cols) > 0 && !is.null(src)
   htmltools::div(id = "files", Map(function(lines, file) {
     sub <- if (has_src) src[src$filename == file, , drop = FALSE] else NULL
+
+    thead <- NULL
+    if (has_src) {
+      head_cells <- c(
+        list(htmltools::tags$th(class = "num", "#"),
+             htmltools::tags$th(class = "coverage", "count")),
+        lapply(source_cols, function(s) {
+          htmltools::tags$th(class = "source-col", s)
+        }),
+        list(htmltools::tags$th(class = "col-sm-12", "source"))
+      )
+      thead <- htmltools::tags$thead(htmltools::tags$tr(head_cells))
+    }
+
+    tbody <- htmltools::tags$tbody(lapply(seq_len(NROW(lines)), function(row_num) {
+      line_no <- lines[row_num, "line"]
+      coverage <- lines[row_num, "coverage"]
+      cov_type <- NULL
+      if (coverage == 0) {
+        cov_value <- "!"
+        cov_type <- "missed"
+      } else if (coverage > 0) {
+        cov_value <- htmltools::HTML(paste0(lines[row_num, "coverage"],
+                                            "<em>x</em>", collapse = ""))
+        cov_type <- "covered"
+      } else {
+        cov_value <- ""
+        cov_type <- "never"
+      }
+
+      src_cells <- list()
+      if (has_src) {
+        src_cells <- lapply(source_cols, function(s) {
+          htmltools::tags$td(class = "source-col", "")
+        })
+        if (coverage != "" && !is.null(sub)) {
+          vals <- sub[sub$line == line_no, source_cols, drop = FALSE]
+          if (nrow(vals) == 1) {
+            src_cells <- lapply(source_cols, function(s) {
+              v <- vals[[s]]
+              if (is.na(v)) v <- 0L
+              htmltools::tags$td(class = "source-col", as.character(v))
+            })
+          }
+        }
+      }
+
+      htmltools::tags$tr(class = cov_type,
+        htmltools::tags$td(class = "num", line_no),
+        htmltools::tags$td(class = "coverage", cov_value),
+        src_cells,
+        htmltools::tags$td(class = "col-sm-12",
+          htmltools::pre(class = "language-r", lines[row_num, "source"])))
+    }))
+
     htmltools::div(id = file, class = "hidden",
-      htmltools::tags$table(class = "table-condensed",
-        htmltools::tags$tbody(lapply(seq_len(NROW(lines)), function(row_num) {
-          line_no <- lines[row_num, "line"]
-          coverage <- lines[row_num, "coverage"]
-          cov_type <- NULL
-          if (coverage == 0) {
-            cov_value <- "!"
-            cov_type <- "missed"
-          } else if (coverage > 0) {
-            cov_value <- htmltools::HTML(paste0(lines[row_num, "coverage"],
-                                                "<em>x</em>", collapse = ""))
-            cov_type <- "covered"
-          } else {
-            cov_value <- ""
-            cov_type <- "never"
-          }
-          note <- NULL
-          if (has_src && !is.null(sub) && coverage != "") {
-            vals <- sub[sub$line == line_no, source_cols, drop = FALSE]
-            if (nrow(vals) == 1) {
-              note <- htmltools::tags$small(paste0(
-                " (", paste(paste0(source_cols, "=",
-                                   format(unlist(vals), trim = TRUE)), collapse = " "), ")"
-              ))
-            }
-          }
-          htmltools::tags$tr(class = cov_type,
-            htmltools::tags$td(class = "num", line_no),
-            htmltools::tags$td(class = "coverage", cov_value, note),
-            htmltools::tags$td(class = "col-sm-12",
-              htmltools::pre(class = "language-r", lines[row_num, "source"])))
-        }))))
+      htmltools::tags$table(class = "table-condensed", thead, tbody))
   }, lines = full, file = names(full)),
+  htmltools::tags$style(
+    "#files thead th{position:sticky;top:0;background:#f5f5f5;z-index:1;border-bottom:1px solid #ddd}",
+    "#files th.num,#files th.coverage,#files th.source-col{text-align:right}",
+    "#files td.source-col{text-align:right;min-width:4.5em;padding:0 0.6em}"
+  ),
   htmltools::tags$script("$('div#files pre').each(function(i, block) {
     hljs.highlightBlock(block);
 });"))
