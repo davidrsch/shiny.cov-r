@@ -37,14 +37,24 @@ shinycov_source_from_file <- function(files) {
 }
 
 sum_counters <- function(by_source) {
+  # Single source (the common case): pass through untouched, so malformed
+  # entries survive for reconstruct_counters() to diagnose rather than being
+  # silently coerced to a number.
+  if (length(by_source) == 1) return(by_source[[1]])
+
   all_keys <- unique(unlist(lapply(by_source, names), use.names = FALSE))
   out <- list()
   for (k in all_keys) {
     entries <- Filter(Negate(is.null), lapply(by_source, `[[`, k))
     if (length(entries) == 0) next
+    # Preserve malformed (non-list, non-numeric) entries as-is.
+    if (any(!vapply(entries, function(e) is.list(e) || is.numeric(e), logical(1)))) {
+      out[[k]] <- entries[[1]]
+      next
+    }
     ref <- entries[[1]]
     total <- sum(vapply(entries, function(e) {
-      if (is.list(e)) e$value %||% 0L else if (is.numeric(e)) as.numeric(e) else 0
+      if (is.list(e)) e$value %||% 0L else as.numeric(e)
     }, numeric(1)))
     if (is.list(ref)) {
       ref$value <- total
@@ -311,6 +321,57 @@ regex_escape <- function(x) {
 #' @return `cov` with additional synthetic entries, one per UI manifest
 #'   element that could be located in the source.
 #' @keywords internal
+#' Find the line range of the smallest enclosing multi-line expression
+#'
+#' Used to make an untested UI element mark its *whole* widget expression
+#' (e.g. `ComboBox.shinyInput(ns("kpi_years"), ...)` across several lines),
+#' not just the single line the id literal sits on.
+#'
+#' @param lines Character vector of source lines.
+#' @param ln A 1-based line number.
+#' @return `integer(2)` `c(start_line, end_line)`; falls back to `c(ln, ln)`.
+#' @keywords internal
+enclosing_expr_range <- function(lines, ln) {
+  pd <- tryCatch(
+    utils::getParseData(parse(text = lines, keep.source = TRUE), includeText = TRUE),
+    error = function(e) NULL
+  )
+  if (is.null(pd)) return(c(ln, ln))
+
+  # Walk up from the string literal(s) on `ln` to the nearest function call
+  # that isn't a namespacing wrapper (`ns`/`NS`). For apps that don't use
+  # modules at all there is no wrapper, so the first enclosing call *is* the
+  # widget and is returned directly. This resolves
+  # `ComboBox.shinyInput(ns("kpi_years"), ...)` to the whole widget while a
+  # single-line `uiOutput(ns("pcghge"))` stays a single line.
+  str_toks <- pd[pd$token == "STR_CONST" & pd$line1 == ln, , drop = FALSE]
+  if (nrow(str_toks) == 0) return(c(ln, ln))
+
+  ranges <- list()
+  for (i in seq_len(nrow(str_toks))) {
+    cur <- str_toks$id[[i]]
+    repeat {
+      par <- pd$parent[pd$id == cur]
+      if (length(par) == 0 || is.na(par[[1]]) || par[[1]] == 0) break
+      par_id <- par[[1]]
+      par_row <- pd[pd$id == par_id, , drop = FALSE]
+      txt <- par_row$text[[1]]
+      if (grepl("(", txt, fixed = TRUE)) {
+        fn <- sub("\\(.*", "", trimws(txt))
+        fn <- sub(".*::", "", fn)
+        fn <- gsub("`", "", fn)
+        if (!(fn %in% c("ns", "NS"))) {
+          ranges[[length(ranges) + 1]] <- c(par_row$line1[[1]], par_row$line2[[1]])
+          break
+        }
+      }
+      cur <- par_id
+    }
+  }
+  if (length(ranges) == 0) return(c(ln, ln))
+  ranges[[which.min(vapply(ranges, function(r) r[[2]] - r[[1]], numeric(1)))]]
+}
+
 merge_ui_coverage <- function(cov, app_dir) {
   manifest_path <- manifest_read_path(app_dir)
   interactions_path <- file.path(shinycov_output_dir(app_dir), "interactions.json")
@@ -518,7 +579,13 @@ merge_ui_coverage <- function(cov, app_dir) {
     }
 
     value <- hit_count[[id]] %||% 0L
-    line_text <- lines[[ln]]
+    # Expand the synthetic entry to the whole enclosing widget expression
+    # (multi-line Fluent/React widgets, etc.), not just the id literal's
+    # line, so an untested widget shows up uncovered across all its lines.
+    rng <- enclosing_expr_range(lines, ln)
+    start_line <- rng[[1]]
+    end_line <- rng[[2]]
+    line_text <- lines[[end_line]]
     # The last two components of an srcref's 8-number vector are the
     # "parsed" first/last line, which for any *real* parser-produced srcref
     # is always a positive line number, equal to first_line/last_line for
@@ -542,7 +609,7 @@ merge_ui_coverage <- function(cov, app_dir) {
     synthetic_seq <- synthetic_seq - 1L
     new_sr <- srcref(
       srcfile,
-      c(ln, 1L, ln, max(1L, nchar(line_text)), 1L, max(1L, nchar(line_text)),
+      c(start_line, 1L, end_line, max(1L, nchar(line_text)), 1L, max(1L, nchar(line_text)),
         synthetic_seq, synthetic_seq)
     )
 
