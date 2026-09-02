@@ -72,15 +72,37 @@ render_report_html_covr <- function(cov, ui, file) {
   table$sizingPolicy$defaultWidth <- "100%"
   table$sizingPolicy$defaultHeight <- NULL
 
+  source_panel <- if (length(source_cols) > 0) {
+    covr:::tab_panel(
+      "Source",
+      htmltools::tags$label(
+        class = "source-col-toggle",
+        htmltools::tags$input(
+          type = "checkbox", id = "shinycov-toggle-sources", checked = NA
+        ),
+        " show source columns"
+      ),
+      covr:::addHighlight(render_source_table(data$full, src, source_cols)),
+      htmltools::tags$script(
+        "$('#shinycov-toggle-sources').on('change', function() {
+           var show = this.checked ? '' : 'none';
+           $('#files .source-col').css('display', show);
+         });"
+      )
+    )
+  } else {
+    covr:::tab_panel("Source", covr:::addHighlight(
+      render_source_table(data$full, src, source_cols)
+    ))
+  }
+
   ui_html <- covr:::fluid_page(
     htmltools::includeCSS(system.file("www/report.css", package = "covr")),
     covr:::column(8, offset = 2, size = "md",
       htmltools::HTML(paste0("<h2>", pkg, " coverage - ", percentage, "</h2>")),
       covr:::tabset_panel(
         covr:::tab_panel("Files", table),
-        covr:::tab_panel("Source", covr:::addHighlight(
-          render_source_table(data$full, src, source_cols)
-        ))
+        source_panel
       )
     )
   )
