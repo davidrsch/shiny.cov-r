@@ -14,16 +14,14 @@ test_that("report() writes a self-contained HTML with per-source line counts", {
   expect_true(file.exists(f))
 
   html <- readLines(f, warn = FALSE)
-  # Per-source annotation is present: a column header in the covr renderer,
-  # a gutter annotation in the no-DT fallback.
+  # Per-source annotation is present as a column header.
   expect_true(any(grepl("cypress", html, fixed = TRUE)))
   expect_true(any(grepl("shinytest2", html, fixed = TRUE)))
-  # Uncovered lines are highlighted (covr uses "missed"; fallback uses "uncovered").
-  expect_true(any(grepl("missed", html, fixed = TRUE)) || any(grepl("uncovered", html, fixed = TRUE)))
+  # Uncovered lines are highlighted.
+  expect_true(any(grepl("missed", html, fixed = TRUE)))
 })
 
 test_that("render_source_table adds per-source columns with a fixed header", {
-  skip_if_not_installed("htmltools")
   full <- list(`/f/app.R` = data.frame(
     line = c(1L, 2L, 3L),
     source = c("x <- 1", "y <- 2", "# comment"),
@@ -67,8 +65,6 @@ test_that("source_coverage total equals the sum of per-source columns", {
 })
 
 test_that("covr-style report keeps DataTables callback valid (no lost backslashes)", {
-  skip_if_not_installed("DT")
-  skip_if_not_installed("htmltools")
   inst <- instrument_file(testthat::test_path("fixtures", "simple-app", "app.R"))
   env <- new.env()
   eval_instrumented(inst, env)

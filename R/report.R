@@ -32,27 +32,14 @@ report <- function(x, file = "coverage-report/index.html", app_dir = ".", ...) {
           " (R lines + UI elements, combined) --")
   if (!is.null(ui)) print_ui_report(ui)
 
-  file <- render_report_html(x, ui, file)
+  file <- render_report_html_covr(x, ui, file)
   message(sprintf("  HTML: %s", normalizePath(file, winslash = "/")))
   message("")
 
   invisible(file)
 }
 
-render_report_html <- function(cov, ui, file) {
-  out <- tryCatch(render_report_html_covr(cov, ui, file), error = function(e) NULL)
-  if (is.null(out)) {
-    return(render_report_html_simple(cov, ui, file))
-  }
-  invisible(out)
-}
-
 render_report_html_covr <- function(cov, ui, file) {
-  if (!requireNamespace("htmltools", quietly = TRUE) ||
-      !requireNamespace("DT", quietly = TRUE)) {
-    stop("htmltools/DT unavailable")
-  }
-
   data <- covr:::to_report_data(cov)
   src <- source_coverage(cov)
   source_cols <- setdiff(names(src), c("filename", "line", "total"))
@@ -183,91 +170,6 @@ render_source_table <- function(full, src, source_cols) {
   htmltools::tags$script("$('div#files pre').each(function(i, block) {
     hljs.highlightBlock(block);
 });"))
-}
-
-render_report_html_simple <- function(cov, ui, file) {
-  pct <- covr::percent_coverage(cov)
-  df <- source_coverage(cov)
-  source_cols <- setdiff(names(df), c("filename", "line", "total"))
-
-  html <- c(
-    "<!DOCTYPE html><html><head><meta charset='utf-8'><style>",
-    "body{font-family:monospace;margin:1em;background:#fff}",
-    "h1,h2{font-family:sans-serif}",
-    ".ui{font-family:sans-serif;font-size:13px}",
-    ".file{margin:1.5em 0;border:1px solid #ddd}",
-    ".file h3{margin:0;padding:.4em .6em;background:#f0f0f0;font-size:14px;font-family:sans-serif}",
-    ".line{display:flex;white-space:pre;font-size:12px;line-height:1.25}",
-    ".gutter{min-width:18em;padding-right:1em;color:#333;text-align:right;border-right:1px solid #eee}",
-    ".lineno{min-width:3.5em;padding:0 .8em;color:#aaa;text-align:right}",
-    ".code{white-space:pre;padding-left:.5em}",
-    ".uncovered{background:#fcece9}",
-    "</style></head><body>",
-    sprintf("<h1>shiny.cov coverage &mdash; %.1f%%</h1>", pct)
-  )
-
-  if (!is.null(ui)) {
-    html <- c(html, "<h2>UI elements</h2><ul class='ui'>")
-    for (inp in ui$inputs) {
-      st <- if (isTRUE(inp$interacted)) sprintf("[OK] interacted (%d x)", inp$count) else "[--] never interacted"
-      mod <- if (nzchar(inp$module %||% "")) sprintf(" [%s]", inp$module) else ""
-      html <- c(html, sprintf("<li>%s (%s)%s &mdash; %s</li>", inp$id, inp$type %||% "unknown", mod, st))
-    }
-    for (out in ui$outputs) {
-      st <- if (isTRUE(out$verified)) sprintf("[OK] verified (%d x)", out$count) else "[--] not verified"
-      mod <- if (nzchar(out$module %||% "")) sprintf(" [%s]", out$module) else ""
-      html <- c(html, sprintf("<li>%s (%s)%s &mdash; %s</li>", out$id, out$type %||% "unknown", mod, st))
-    }
-    html <- c(html, "</ul>")
-  }
-
-  for (f in unique(df$filename)) {
-    if (!file.exists(f)) next
-    sub <- df[df$filename == f, , drop = FALSE]
-    src_lines <- readLines(f, warn = FALSE)
-    total_num <- suppressWarnings(as.numeric(sub$total))
-    total_num[is.na(total_num)] <- 0
-    f_covered <- sum(total_num > 0)
-    f_pct <- if (nrow(sub) > 0) round(100 * f_covered / nrow(sub), 1) else 100
-    html <- c(html, sprintf("<div class='file'><h3>%s &mdash; %s%%</h3>", f, f_pct))
-    for (ln in seq_along(src_lines)) {
-      vals <- numeric(length(source_cols))
-      names(vals) <- source_cols
-      for (s in source_cols) {
-        v <- sub[[s]][sub$line == ln]
-        if (length(v) == 0) {
-          vals[[s]] <- 0
-        } else {
-          n <- suppressWarnings(as.numeric(v))
-          vals[[s]] <- if (is.na(n)) 0 else n
-        }
-      }
-      total <- if (length(source_cols) == 0) {
-        v <- total_num[sub$line == ln]
-        if (length(v) == 0) 0 else v
-      } else {
-        sum(vals)
-      }
-      if (length(source_cols) <= 1) {
-        gutter <- as.character(total)
-      } else {
-        gutter <- paste0(total, " (", paste(paste0(source_cols, "=", vals), collapse = " "), ")")
-      }
-      cls <- if (total == 0) "uncovered" else ""
-      esc <- gsub("&", "&amp;", src_lines[[ln]])
-      esc <- gsub("<", "&lt;", esc)
-      esc <- gsub(">", "&gt;", esc)
-      html <- c(html, sprintf(
-        "<div class='line %s'><span class='gutter'>%s</span><span class='lineno'>%d</span><span class='code'>%s</span></div>",
-        cls, gutter, ln, esc
-      ))
-    }
-    html <- c(html, "</div>")
-  }
-  html <- c(html, "</body></html>")
-  dir.create(dirname(file), showWarnings = FALSE, recursive = TRUE)
-  writeLines(html, file)
-  invisible(file)
 }
 
 #' UI interaction coverage report

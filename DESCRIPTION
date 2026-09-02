@@ -25,6 +25,8 @@ Encoding: UTF-8
 NeedsCompilation: no
 Imports:
     covr (>= 3.2.0),
+    DT,
+    htmltools,
     jsonlite,
     R6,
     shiny (>= 1.7.0),
@@ -32,8 +34,6 @@ Imports:
 Suggests:
     box,
     chromote,
-    DT,
-    htmltools,
     knitr,
     rlang,
     rmarkdown,
