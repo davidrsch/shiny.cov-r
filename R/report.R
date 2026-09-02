@@ -1,24 +1,21 @@
 #' Generate a coverage report
 #'
-#' Produces an HTML line-coverage report via `covr::report()` from
-#' coverage data collected by [collect()]. `x` already has UI interaction
-#' coverage merged directly into it (see [merge_ui_coverage()]) -- an
-#' untested input/output's own source line is uncovered in `x` exactly
-#' like an untested R branch would be, so `covr::percent_coverage(x)` and
-#' the HTML below are already the single, blended number. This function
-#' additionally prints a per-element breakdown (which specific inputs,
-#' outputs, and tabs were exercised) as supplementary detail underneath
-#' that headline number -- the same relationship `covr::report()` itself
-#' has between an overall percentage and its per-file breakdown.
+#' Produces a self-contained HTML report showing, per source file, every
+#' line with its hit count in the left gutter -- including a per-test-source
+#' breakdown (`total (cypress=N shinytest2=M)`) when the run was tagged with
+#' `SHINYCOV_SOURCE` -- plus the per-element UI breakdown. `x` already has UI
+#' interaction coverage merged directly into it (see [merge_ui_coverage()]),
+#' so [covr::percent_coverage(x)] and this report are one blended number.
 #'
 #' @param x A coverage object returned by [collect()].
-#' @param ...   Passed to `covr::report()`.
+#' @param file Output `.html` path (default `"coverage-report/index.html"`).
 #' @param app_dir Path to the app directory for the UI manifest and
 #'   interaction log. Defaults to `"."`.
+#' @param ... Ignored (kept for compatibility).
 #'
 #' @return The HTML report path (invisibly).
 #' @export
-report <- function(x, ..., app_dir = ".") {
+report <- function(x, file = "coverage-report/index.html", app_dir = ".", ...) {
   if (!inherits(x, "coverage")) {
     stop("`x` must be a coverage object from shiny.cov::collect().")
   }
@@ -31,17 +28,90 @@ report <- function(x, ..., app_dir = ".") {
   message("")
   message("-- shiny.cov coverage: ", sprintf("%.1f%%", pct),
           " (R lines + UI elements, combined) --")
-
-  # Per-element detail: which specific inputs/outputs/tabs were exercised.
-  # This doesn't compete with the headline percentage above -- it explains
-  # it, the same way covr::report()'s per-file breakdown explains its
-  # overall project percentage.
   if (!is.null(ui)) print_ui_report(ui)
 
-  file <- covr::report(x, ...)
+  file <- render_report_html(x, ui, file)
   message(sprintf("  HTML: %s", normalizePath(file, winslash = "/")))
   message("")
 
+  invisible(file)
+}
+
+render_report_html <- function(cov, ui, file) {
+  pct <- covr::percent_coverage(cov)
+  df <- source_coverage(cov)
+  source_cols <- setdiff(names(df), c("filename", "line", "total"))
+
+  html <- c(
+    "<!DOCTYPE html><html><head><meta charset='utf-8'><style>",
+    "body{font-family:monospace;margin:1em;background:#fff}",
+    "h1,h2{font-family:sans-serif}",
+    ".ui{font-family:sans-serif;font-size:13px}",
+    ".file{margin:1.5em 0;border:1px solid #ddd}",
+    ".file h3{margin:0;padding:.4em .6em;background:#f0f0f0;font-size:14px;font-family:sans-serif}",
+    ".line{display:flex;white-space:pre;font-size:12px;line-height:1.25}",
+    ".gutter{min-width:18em;padding-right:1em;color:#333;text-align:right;border-right:1px solid #eee}",
+    ".lineno{min-width:3.5em;padding:0 .8em;color:#aaa;text-align:right}",
+    ".code{white-space:pre;padding-left:.5em}",
+    ".uncovered{background:#fcece9}",
+    "</style></head><body>",
+    sprintf("<h1>shiny.cov coverage &mdash; %.1f%%</h1>", pct)
+  )
+
+  if (!is.null(ui)) {
+    html <- c(html, "<h2>UI elements</h2><ul class='ui'>")
+    for (inp in ui$inputs) {
+      st <- if (isTRUE(inp$interacted)) sprintf("[OK] interacted (%d x)", inp$count) else "[--] never interacted"
+      mod <- if (nzchar(inp$module %||% "")) sprintf(" [%s]", inp$module) else ""
+      html <- c(html, sprintf("<li>%s (%s)%s &mdash; %s</li>", inp$id, inp$type %||% "unknown", mod, st))
+    }
+    for (out in ui$outputs) {
+      st <- if (isTRUE(out$verified)) sprintf("[OK] verified (%d x)", out$count) else "[--] not verified"
+      mod <- if (nzchar(out$module %||% "")) sprintf(" [%s]", out$module) else ""
+      html <- c(html, sprintf("<li>%s (%s)%s &mdash; %s</li>", out$id, out$type %||% "unknown", mod, st))
+    }
+    html <- c(html, "</ul>")
+  }
+
+  for (f in unique(df$filename)) {
+    if (!file.exists(f)) next
+    sub <- df[df$filename == f, , drop = FALSE]
+    src_lines <- readLines(f, warn = FALSE)
+    f_covered <- sum(sub$total > 0)
+    f_pct <- if (nrow(sub) > 0) round(100 * f_covered / nrow(sub), 1) else 100
+    html <- c(html, sprintf("<div class='file'><h3>%s &mdash; %s%%</h3>", f, f_pct))
+    for (ln in seq_along(src_lines)) {
+      vals <- numeric(length(source_cols))
+      names(vals) <- source_cols
+      for (s in source_cols) {
+        v <- sub[[s]][sub$line == ln]
+        vals[[s]] <- if (length(v) == 0) 0 else v
+      }
+      total <- if (length(source_cols) == 0) {
+        v <- sub$total[sub$line == ln]
+        if (length(v) == 0) 0 else v
+      } else {
+        sum(vals)
+      }
+      if (length(source_cols) <= 1) {
+        gutter <- as.character(total)
+      } else {
+        gutter <- paste0(total, " (", paste(paste0(source_cols, "=", vals), collapse = " "), ")")
+      }
+      cls <- if (total == 0) "uncovered" else ""
+      esc <- gsub("&", "&amp;", src_lines[[ln]])
+      esc <- gsub("<", "&lt;", esc)
+      esc <- gsub(">", "&gt;", esc)
+      html <- c(html, sprintf(
+        "<div class='line %s'><span class='gutter'>%s</span><span class='lineno'>%d</span><span class='code'>%s</span></div>",
+        cls, gutter, ln, esc
+      ))
+    }
+    html <- c(html, "</div>")
+  }
+  html <- c(html, "</body></html>")
+  dir.create(dirname(file), showWarnings = FALSE, recursive = TRUE)
+  writeLines(html, file)
   invisible(file)
 }
 
@@ -336,45 +406,3 @@ source_coverage <- function(cov) {
   out[order(out$filename, out$line), , drop = FALSE]
 }
 
-#' Write a self-contained per-source coverage report
-#'
-#' Writes a simple, self-contained HTML table (one row per file/line, one
-#' column per test source) plus a JSON sidecar -- no external assets, so it
-#' can be uploaded/downloaded as a single artifact and opened anywhere.
-#'
-#' @param cov A coverage object returned by [collect()].
-#' @param file Output `.html` path (default `"coverage-by-source.html"`).
-#' @return Invisibly returns `file`.
-#' @export
-source_report <- function(cov, file = "coverage-by-source.html") {
-  df <- source_coverage(cov)
-  if (is.null(df)) {
-    message("shiny.cov: no per-source coverage data to report.")
-    return(invisible(NULL))
-  }
-  cols <- names(df)
-  header <- paste0("<th>", cols, "</th>", collapse = "")
-  rows <- paste(vapply(seq_len(nrow(df)), function(i) {
-    r <- df[i, ]
-    tds <- paste0(
-      "<td>",
-      vapply(seq_along(r), function(j) as.character(r[[j]]), character(1)),
-      "</td>",
-      collapse = ""
-    )
-    paste0("<tr>", tds, "</tr>")
-  }, character(1)), collapse = "\n")
-  html <- paste0(
-    "<!DOCTYPE html><html><head><meta charset='utf-8'><style>",
-    "body{font-family:monospace}table{border-collapse:collapse;font-size:12px}",
-    "td,th{border:1px solid #ccc;padding:2px 8px}",
-    "td:last-child{font-weight:bold}",
-    "</style></head><body><h2>coverage by source</h2><table><tr>",
-    header, "</tr>", rows, "</table></body></html>"
-  )
-  writeLines(html, file)
-  if (requireNamespace("jsonlite", quietly = TRUE)) {
-    jsonlite::write_json(df, sub("\\.html$", ".json", file), pretty = TRUE)
-  }
-  invisible(file)
-}
