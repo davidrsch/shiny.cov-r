@@ -10,6 +10,23 @@
 
 output_file <- Sys.getenv("SHINYCOV_OUTPUT", unset = NA_character_)
 
+# id_srcrefs.rds / modules.rds are app-level metadata (shared across test
+# sources), so derive them from the untagged coverage path once, up front.
+id_srcrefs_file <- sub("coverage\\.rds$", "id_srcrefs.rds", output_file)
+modules_file <- sub("coverage\\.rds$", "modules.rds", output_file)
+
+# When SHINYCOV_SOURCE is set (e.g. "shinytest2", "cypress", "playwright"),
+# tag the coverage file so each test source accumulates its own counters
+# rather than overwriting the others'; collect() then sums them.
+shinycov_source <- Sys.getenv("SHINYCOV_SOURCE", unset = "")
+if (nzchar(shinycov_source)) {
+  output_file <- sub(
+    "coverage\\.rds$",
+    paste0("coverage.", shinycov_source, ".rds"),
+    output_file
+  )
+}
+
 if (!is.na(output_file) && nzchar(output_file)) {
 
 # ---- 1. Counter environment ----
@@ -313,7 +330,6 @@ save_coverage <- function(quiet = FALSE) {
   if (exists(".shinycov_id_srcrefs", where = .GlobalEnv, inherits = FALSE)) {
     id_srcrefs <- as.list(.shinycov_id_srcrefs)
     if (length(id_srcrefs) > 0) {
-      id_srcrefs_file <- sub("coverage\\.rds$", "id_srcrefs.rds", output_file)
       tryCatch({
         # Same concurrent-process concern as coverage.rds above: merge
         # with whatever's already on disk (union of ids -- there's no
@@ -337,7 +353,6 @@ save_coverage <- function(quiet = FALSE) {
   if (exists(".shinycov_modules", where = .GlobalEnv, inherits = FALSE)) {
     modules <- ls(.shinycov_modules, all.names = TRUE)
     if (length(modules) > 0) {
-      modules_file <- sub("coverage\\.rds$", "modules.rds", output_file)
       tryCatch({
         if (file.exists(modules_file)) {
           on_disk <- tryCatch(readRDS(modules_file), error = function(e) character())

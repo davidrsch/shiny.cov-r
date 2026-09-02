@@ -20,33 +20,69 @@
 #' covr::report(cov)
 #' covr::percent_coverage(cov)
 #' }
+shinycov_coverage_files <- function(app_dir) {
+  out <- shinycov_output_dir(app_dir)
+  if (!dir.exists(out)) return(character(0))
+  files <- list.files(out, pattern = "^coverage.*\\.rds$", full.names = TRUE)
+  files <- files[!grepl("\\.tmp[0-9]+$", files)]
+  sort(files)
+}
+
+shinycov_source_from_file <- function(files) {
+  vapply(files, function(f) {
+    b <- basename(f)
+    if (identical(b, "coverage.rds")) return("total")
+    gsub("^coverage\\.|\\.rds$", "", b)
+  }, character(1))
+}
+
+sum_counters <- function(by_source) {
+  all_keys <- unique(unlist(lapply(by_source, names), use.names = FALSE))
+  out <- list()
+  for (k in all_keys) {
+    entries <- Filter(Negate(is.null), lapply(by_source, `[[`, k))
+    if (length(entries) == 0) next
+    ref <- entries[[1]]
+    total <- sum(vapply(entries, function(e) {
+      if (is.list(e)) e$value %||% 0L else if (is.numeric(e)) as.numeric(e) else 0
+    }, numeric(1)))
+    if (is.list(ref)) {
+      ref$value <- total
+      out[[k]] <- ref
+    } else {
+      out[[k]] <- total
+    }
+  }
+  out
+}
+
 collect <- function(app_dir = ".", output_file = NULL) {
   if (is.null(output_file)) {
-    output_file <- shinycov_output_file(app_dir)
-  }
-
-  if (!file.exists(output_file)) {
-    stop(
-      "Coverage file not found at ",
-      output_file,
-      "\n",
-      "  Have you run your tests after calling shiny.cov::setup()?\n",
-      "  The Shiny process must shut down gracefully for coverage to be written."
-    )
-  }
-
-  counters <- tryCatch(
-    readRDS(output_file),
-    error = function(e) {
-      # Include the underlying error message -- a truncated write, a
-      # wrong-format file, and a plain permissions error are otherwise
-      # indistinguishable to the user.
+    files <- shinycov_coverage_files(app_dir)
+    if (length(files) == 0) {
       stop(
-        "Failed to read coverage file: ", output_file,
-        " (", conditionMessage(e), ")"
+        "Coverage file not found in ", shinycov_output_dir(app_dir),
+        "\n",
+        "  Have you run your tests after calling shiny.cov::setup()?\n",
+        "  The Shiny process must shut down gracefully for coverage to be written."
       )
     }
-  )
+    by_source <- lapply(files, function(f) {
+      tryCatch(readRDS(f), error = function(e) {
+        stop("Failed to read coverage file: ", f, " (", conditionMessage(e), ")")
+      })
+    })
+    names(by_source) <- shinycov_source_from_file(files)
+    counters <- sum_counters(by_source)
+    attr(counters, "shinycov_sources") <- by_source
+  } else {
+    if (!file.exists(output_file)) {
+      stop("Coverage file not found at ", output_file)
+    }
+    counters <- tryCatch(readRDS(output_file), error = function(e) {
+      stop("Failed to read coverage file: ", output_file, " (", conditionMessage(e), ")")
+    })
+  }
 
   if (length(counters) == 0) {
     warning("Coverage file is empty -- no code was instrumented or executed.")
@@ -55,13 +91,22 @@ collect <- function(app_dir = ".", output_file = NULL) {
     return(cov)
   }
 
-  message("Read ", length(counters), " tracked expressions from ", output_file)
+  sources <- attr(counters, "shinycov_sources", exact = TRUE)
+  if (is.null(sources)) {
+    message("Read ", length(counters), " tracked expressions from ", output_file)
+  } else {
+    message(
+      "Read ", length(counters), " tracked expressions across sources: ",
+      paste(names(sources), collapse = ", ")
+    )
+  }
 
   counter_env <- reconstruct_counters(counters)
   cov <- build_coverage(counter_env)
   class(cov) <- c("coverage", class(cov))
   attr(cov, "package") <- NULL
   attr(cov, "type") <- "coverage"
+  attr(cov, "shinycov_sources") <- sources
 
   # Merge UI interaction coverage directly into `cov` (see merge_ui_coverage()
   # for why this is done as additional entries rather than a separate

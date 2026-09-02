@@ -266,3 +266,37 @@ print_ui_report <- function(r) {
   }
   cat("\n")
 }
+
+#' Per-source coverage summary
+#'
+#' Returns a data frame with one row per test source that produced coverage
+#' (e.g. `shinytest2`, `cypress`, `playwright`), showing the number of tracked
+#' expressions and the total hit count contributed by each source. For a run
+#' with a single (untagged) source, the only row is `total`.
+#'
+#' @param cov A coverage object returned by [collect()].
+#'
+#' @return A `data.frame` with columns `source`, `expressions`, and `hits`.
+#' @export
+source_counts <- function(cov) {
+  sources <- attr(cov, "shinycov_sources", exact = TRUE)
+  if (is.null(sources)) {
+    return(data.frame(
+      source = "total",
+      expressions = length(cov),
+      hits = sum(vapply(cov, function(e) e$value %||% 0L, numeric(1))),
+      stringsAsFactors = FALSE
+    ))
+  }
+  do.call(rbind, lapply(names(sources), function(s) {
+    ctrs <- sources[[s]]
+    data.frame(
+      source = s,
+      expressions = length(ctrs),
+      hits = sum(vapply(ctrs, function(e) {
+        if (is.list(e)) e$value %||% 0L else if (is.numeric(e)) as.numeric(e) else 0
+      }, numeric(1))),
+      stringsAsFactors = FALSE
+    )
+  }))
+}
