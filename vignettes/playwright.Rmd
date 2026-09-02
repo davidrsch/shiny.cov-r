@@ -1,0 +1,154 @@
+---
+title: "Using shiny.cov with Playwright"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Using shiny.cov with Playwright}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>",
+  eval = FALSE
+)
+```
+
+## Overview
+
+`shiny.cov` supports Playwright end-to-end tests through its companion npm package `shiny.cov-playwright`. The R side handles code instrumentation and coverage collection; the JS side wraps Playwright's own `page`/`Locator` objects to log interactions automatically and to discover the UI manifest, with no explicit logging calls needed in your test files.
+
+The same browser-side discovery script this package uses (`shiny.cov-r/inst/js/discover-bindings.js`) is also what powers the shinytest2 and Cypress adapters, and it's the same script the Python counterpart of this project, `shiny.cov` (`shiny.cov-py` on GitHub), uses for py-shiny apps. Reach for `shiny.cov-playwright` over the Cypress adapter when you're already writing (or would rather write) Playwright tests instead of Cypress ones -- both adapters are fully supported, this is a matter of which test runner you prefer, not a capability gap between them. One concrete difference: Playwright's API has no command queue for a wrapper to fight, so `shiny.cov-playwright` can log every recognized interaction automatically, without the explicit `cy.shinyCovInteract()` call the Cypress adapter requires after each real command.
+
+## Installation
+
+```bash
+npm install --save-dev shiny.cov-playwright @playwright/test
+```
+
+If you're developing `shiny.cov-playwright` itself (working from a local checkout rather than a published version), install it as a real `file:`-protocol dependency in your Playwright project's own `package.json` rather than reaching into it via a raw relative path outside `node_modules`:
+
+```json
+{
+  "devDependencies": {
+    "shiny.cov-playwright": "file:../path/to/shiny.cov-playwright"
+  }
+}
+```
+
+## Playwright configuration
+
+There is no `server.js`/plugin module to register here, unlike the Cypress adapter -- Playwright's own `webServer` config already implements process spawn, readiness polling, and graceful-then-forceful shutdown, so starting the instrumented app is pure config, not code. `shiny.cov:::run_covr_server()` is a small internal helper that reads two environment variables and calls `shiny::runApp()`; it's what the `command` below actually invokes.
+
+```ts
+// playwright.config.ts
+import { defineConfig } from '@playwright/test'
+
+const port = 3333
+const appDir = 'app'
+
+export default defineConfig({
+  globalTeardown: require.resolve('shiny.cov-playwright/global-teardown'),
+  use: {
+    baseURL: `http://127.0.0.1:${port}`,
+    // Resolves where the fixtures below read/write .shiny.cov/*.json --
+    // must match the app_dir shiny.cov::setup()/shiny.cov::collect() use.
+    shinyCovAppDir: appDir
+  },
+  webServer: {
+    command: 'Rscript -e "shiny.cov:::run_covr_server()"', // static, no interpolation
+    url: `http://127.0.0.1:${port}`,
+    env: {
+      SHINYCOV_SERVER_APP_DIR: appDir,
+      SHINYCOV_SERVER_PORT: String(port),
+      SHINYCOV_OUTPUT: `${appDir}/.shiny.cov/coverage.rds`,
+      R_COVR: '1'
+    },
+    // Reproduces the same 5s-SIGTERM-then-SIGKILL shutdown
+    // shiny.cov-cypress's hand-rolled server.js implements manually.
+    gracefulShutdown: { signal: 'SIGTERM', timeout: 5000 },
+    reuseExistingServer: !process.env.CI
+  }
+})
+```
+
+127.0.0.1, not `localhost`: `shiny::runApp()` binds the IPv4 loopback only, and some Node versions resolve `localhost` to the IPv6 loopback first -- matching `url`/`baseURL` to the same address `run_covr_server()` binds avoids a readiness-poll timeout against a server that's genuinely up.
+
+## Running tests with coverage
+
+The order below matters, the same way it does for the Cypress adapter: `shiny.cov::setup()` has to run *before* Playwright's `webServer` starts the app -- it's what writes the `app.R` wrapper that makes `SHINYCOV_OUTPUT`/`R_COVR` do anything at all. Skipping this step doesn't error; the app just runs uninstrumented and coverage comes back empty.
+
+### 1. Set up the R side
+
+```r
+# setup-coverage.R
+shiny.cov::setup("app")
+```
+
+### 2. Write tests using shiny.cov's `test`/`expect`
+
+```js
+// tests/example.spec.js
+const { test, expect } = require('shiny.cov-playwright')
+
+test('fills the form', async ({ page }) => {
+  await page.goto('/')
+  await page.locator('#name').fill('Alice')
+  await page.locator('#submit').click()
+})
+```
+
+Every recognized Locator/Page method call is logged automatically, including calls made through `getByRole()`/`getByLabel()`/`getByText()`/`getByTestId()`/`getByPlaceholder()`/`getByAltText()`/`getByTitle()` and chains built off those (`.filter()`, `.first()`, `.nth()`, `.and()`, `.or()`), as well as interactions inside a `page.frameLocator(...)`. There's no `cy.shinyCovInteract()`-style explicit call to make -- import `test`/`expect` from `shiny.cov-playwright` instead of `@playwright/test` and write ordinary Playwright tests.
+
+Coverage merging only counts interactions whose action is in shiny.cov's shared vocabulary (`shiny.cov::shinycov_input_actions()`/`shiny.cov::shinycov_output_actions()`, kept in sync with what this package actually emits): `click`, `dblclick`, `tap`, `check`, `uncheck`, `fill`, `type`, `press`, `pressSequentially`, `selectOption`, `setInputFiles`, `dragTo`, `clear`, `selectText`, `focus`, `hover` for inputs, and `textContent`, `innerText`, `innerHTML`, `getAttribute`, `inputValue` for outputs. Any other Locator/Page method call (`.waitFor()`, `.count()`, `.boundingBox()`, ...) is not logged -- it isn't a UI interaction the coverage report needs to know about.
+
+### 3. Run tests, then collect coverage
+
+```json
+// package.json scripts
+{
+  "setup-coverage": "Rscript setup-coverage.R",
+  "test-e2e-coverage": "npm run setup-coverage && playwright test",
+  "posttest-e2e-coverage": "Rscript collect-coverage.R"
+}
+```
+
+```r
+# collect-coverage.R
+cov <- shiny.cov::collect("app")
+covr::report(cov)
+shiny.cov::cleanup("app")
+```
+
+If a run fails partway through, `app.R` is left wrapped and the next `setup()` call refuses to run until you clean it up -- add a `pretest-e2e-coverage` npm hook that runs `Rscript -e "shiny.cov::cleanup('app')"` so every run starts from a clean slate regardless of how the previous one ended.
+
+## How it works
+
+Auto-logging works by overriding the built-in `page` fixture (via `test.extend()`, the documented mechanism for this) with a `Proxy` that observes real Locator/Page method calls and logs the recognized ones, then forwards every call through to the real Playwright method unchanged -- auto-wait, retry, and tracing, which all live inside those real methods, are untouched. Because `.locator()`, `.filter()`, `.first()`, `.nth()`, `.getByRole()`, `.frameLocator()`, and similar methods each return a brand-new object, the wrapper re-wraps every one of those return values recursively, so a chained call like `page.locator('#list').filter({...}).click()` stays logged at every hop, not just the first. `expect()` assertions against a wrapped `page`/Locator work normally, since the Proxy is transparent to anything that isn't a logged call.
+
+Workers are separate OS processes that can't communicate (Playwright's own documented execution model), so each worker accumulates its own interaction log in memory and flushes it to a worker-scoped file (`.shiny.cov/interactions-worker-{workerIndex}.json`) after every test, with one more flush at worker teardown as a final safety net. `globalTeardown` (this package's `./global-teardown` export, wired into `playwright.config.ts` above) merges every worker's file into a single `.shiny.cov/interactions.json` once the whole run finishes and deletes the per-worker files -- the same per-worker-file-then-merge shape Playwright's own blob reporter uses for test results. It also warns if the number of workers that reported any data looks low relative to the run's configured worker count, a signal that a worker may have crashed before flushing anything.
+
+UI manifest discovery works differently here than the "browser registry" description above might suggest by name alone, but reaches the same place: `shinyCovDiscoverManifest()` runs automatically after every test (as an auto-fixture) and is also available to call explicitly mid-test, for transient UI such as a modal or wizard step that mounts and unmounts within a single test. It runs the literal same script the R/shinytest2 and Cypress adapters do (`shiny.cov-r/inst/js/discover-bindings.js`, vendored into this package and kept in sync by a script that asserts the vendored copy hasn't drifted), via `page.evaluate()` against the app's own `Shiny.inputBindings`/`Shiny.outputBindings` registry. Manifest snapshots are written as a plain array to `.shiny.cov/manifest-snapshots.json` -- deliberately *not* merged on the JS side. `shiny.cov`'s R side merges that array at read time, so this adapter's write path stays a dumb accumulate rather than a third hand-copy of the merge algorithm the R and Python sides already implement.
+
+## Limitations
+
+`page.evaluate()` runs subject to the app's own Content-Security-Policy, the same as any script evaluated inside the page. This only matters for an app with a strict `script-src` CSP that blocks inline `eval()`-style execution -- a rare configuration, not a common failure mode, but worth knowing if manifest discovery comes back empty against a CSP-hardened app.
+
+A discovery failure after any given test -- an API drift, a CSP restriction, a bug in the vendored discovery script -- doesn't fail the test; it just means that test contributes no manifest snapshot, but is reported via `console.warn` (once per worker) so a systematically-failing discovery path is diagnosable rather than silently looking like "this app has little UI."
+
+Interactions performed through `page.keyboard`/`page.mouse` rather than through a Locator's own method (`.press()`, `.click()`, ...) aren't logged -- the wrapper intercepts Locator and Page methods, not these separate low-level objects. Use the Locator-level equivalent where you want an interaction counted.
+
+## Troubleshooting
+
+### Manifest not found
+
+`.shiny.cov/manifest-snapshots.json` is written by `shinyCovDiscoverManifest()` (see above -- there is no HTTP endpoint for this, and the R side doesn't write it on this path). If it's missing, interaction logging still works but the UI coverage report won't show which elements exist. This almost always means either `shinyCovAppDir` in `playwright.config.ts` resolved a different directory than `shiny.cov::setup()` used, or the `page` fixture wasn't imported from `shiny.cov-playwright` (a test importing `test`/`expect` from `@playwright/test` directly gets the unwrapped, unlogged fixtures).
+
+### Coverage file empty or stale
+
+Coverage is saved periodically in the background as well as on graceful shutdown, so even a hard-killed process should only lose the last couple of seconds of interaction. If the file is completely empty, check that `SHINYCOV_OUTPUT` and `R_COVR=1` were actually set in the `webServer.env` block above; setting them without having called `setup()` first doesn't error, it just leaves the app uninstrumented.
+
+### Setup interrupted
+
+If a previous run died partway through -- a server timeout, a failing test, `Ctrl+C` -- `app.R` can be left wrapped with no automatic recovery. `shiny.cov::setup()` detects this (a leftover `*.shinycov_backup` file) and refuses to run rather than risking a double-wrap, with an error pointing at `shiny.cov::cleanup()`. Wiring `cleanup()` as a `pretest-e2e-coverage` npm hook (see "Running tests with coverage" above) means this resolves itself automatically on the next run instead of needing a manual `shiny.cov::cleanup("app")` call.

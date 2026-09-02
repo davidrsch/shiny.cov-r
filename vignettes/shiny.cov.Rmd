@@ -1,0 +1,97 @@
+---
+title: "Getting Started with shiny.cov"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Getting Started with shiny.cov}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>",
+  eval = FALSE
+)
+```
+
+## Overview
+
+`shiny.cov` provides line coverage and UI interaction coverage for Shiny applications tested with [shinytest2](https://rstudio.github.io/shinytest2/), [Cypress](https://www.cypress.io/), or [Playwright](https://playwright.dev/).
+
+Unlike `covr::package_coverage()`, which can only instrument R packages, `shiny.cov` works with **any Shiny app** -- single-file `app.R`, `ui.R`+`server.R`, `{box}`-based apps (including rhino apps), and multi-file apps using `source()` -- driven by a real browser or Cypress in a separate R process.
+
+## How it works
+
+`shiny.cov::setup()` renames the app's entry point (`app.R`, or the `ui.R`+`server.R` pair) to a backup file and writes a wrapper in its place. The wrapper loads a bootstrap script before running the original code through it. That bootstrap:
+
+- Instruments every file loaded via `source()` **and** every module loaded via `box::use()`, using a recursive AST tracer ported in-tree from `{covr}` (MIT licensed, same as this package -- see `R/trace.R`) rather than called via `covr:::` at runtime -- so coverage is real branch-level tracking, not just "did this file load," without depending on covr's unexported internals staying stable across versions.
+- Hooks `shiny::moduleServer()` to record real module namespace boundaries, and `htmltools::tag()`/`tagAppendAttributes()` to record which source line constructed which element id (a fallback used when an id is computed, e.g. inside a loop, rather than a literal string).
+- Persists counters to `coverage.rds` on graceful shutdown, and also periodically in the background. Graceful shutdown (`onStop()`/`.Last()`) is best-effort and not always reliable across test frameworks and platforms; the periodic save means an abrupt kill loses at most a couple of seconds of the most recent interaction, not the whole session.
+
+The UI manifest (inputs, outputs, tabs, conditional panels) is *not* built by inspecting the server-side R tag tree -- guessing from CSS classes only ever knows about the classes it was told to look for, and could never generalize to a third-party widget library (`shinyWidgets`, `shiny.fluent`, or any custom `Shiny.inputBindings.register()` call) with its own DOM conventions. Instead, `shiny.cov::AppDriver` asks the live browser's own `Shiny.inputBindings`/`Shiny.outputBindings` registry what's actually bound on the page, right after the app loads and again at `stop()` -- every working Shiny input/output, regardless of which library built it, must register there for Shiny's client-server protocol to function at all, so this works without `shiny.cov` ever needing to know a given widget library exists. The Cypress side (`cy.shinyCovDiscoverManifest()`) does the exact same thing via `cy.window()`.
+
+For Cypress and Playwright, both of which start the Shiny process via a plain shell command instead of `callr`, `setup()` also injects a `.Rprofile` snippet as a fallback activation path.
+
+## Quick start
+
+```r
+library(shiny.cov)
+
+# 1. Set up coverage instrumentation
+shiny.cov::setup("my-shiny-app")
+
+# 2. Run your tests
+shinytest2::test_app("my-shiny-app")
+
+# 3. Collect coverage
+cov <- shiny.cov::collect("my-shiny-app")
+
+# 4. View the report
+covr::report(cov)
+
+# 5. Clean up
+shiny.cov::cleanup("my-shiny-app")
+```
+
+## UI interaction coverage is part of the same number
+
+`shiny.cov::collect()` doesn't just return R line coverage -- it merges UI interaction coverage directly into the same `covr` coverage object. An input or output that was never interacted with shows up as *uncovered* on its own source line, exactly like an untested branch would, so `covr::percent_coverage()`, `covr::report()`, and `covr::to_cobertura()` all reflect server logic and UI interaction as **one number**, not two separate metrics you have to reconcile yourself.
+
+For a human-readable breakdown of *which specific* inputs/outputs/tabs were exercised (supplementary detail, not a competing metric):
+
+```r
+shiny.cov::ui_report(cov)
+```
+
+```
+  bins (sliderInput)         [OK] interacted (3x)
+  go (actionButton)          [OK] interacted (2x)
+  name (textInput)           [--] never interacted
+  distPlot (plotOutput)      [OK] verified
+  summary (tableOutput)      [--] never verified
+```
+
+`shiny.cov::report()` prints this same breakdown underneath the headline percentage and also writes the standard `covr` HTML report.
+
+## Supported app types
+
+| App type | Support |
+|---|---|
+| `app.R` (single file) | Full |
+| `ui.R` + `server.R` | Full |
+| Multi-file with `source()` | Full |
+| `{box}` modules / rhino apps | Full -- see `vignette("rhino", package = "shiny.cov")` |
+| Package-based (golem) | Via `covr::package_coverage()` -- no process boundary to cross, `shiny.cov` isn't needed |
+
+## Limitations
+
+- **Manifest discovery is two snapshots, not continuous**: which UI elements exist at all (the denominator behind the coverage percentage) is discovered by asking the browser's live `Shiny.inputBindings`/`Shiny.outputBindings` registry what's bound on the page. That discovery only runs automatically twice per `AppDriver` -- once right after the app loads, and once in `stop()`.
+  - Anything that mounts into the DOM and is unmounted again *within* a test -- a `showModal()` dialog closed before the test ends, a wizard step advanced past and left, a `conditionalPanel()`/`insertUI()` element removed again -- can be absent from the DOM at both snapshot points, and so is silently excluded from the manifest entirely. This is not reported as "uncovered": it's simply missing from the denominator, which makes the reported percentage look *more* complete than it really is, not less.
+  - If your app has such transient UI and you want it counted, call `app$discover_manifest()` yourself mid-test, right after revealing the element and before whatever removes it again. It's a public method for exactly this reason, and repeated calls merge with earlier snapshots rather than overwriting them, so calling it liberally is always safe.
+- **Coarse UI-construction line granularity**: R line coverage for the *code that builds* the UI (e.g. `fluidPage(sliderInput(...), ...)`) is still only as fine-grained as `covr`'s own AST tracer gets -- a whole nested call tree with no internal branches typically collapses into one counter. The UI-element-level merge described above works around this for interaction status specifically, but the raw R-line percentage for a UI-construction file can still look higher than you'd expect from line coverage alone. Use `ui_report()`'s per-element breakdown for the precise picture.
+- **Abrupt kill (SIGKILL)**: the periodic background save narrows this to "lose at most a couple of seconds," but doesn't eliminate it entirely -- always let the test framework shut the process down normally when possible.
+- **Performance**: instrumentation adds overhead (particularly for `{box}` apps with many small module files). Use in CI, not production.
+- **`setup()`/`cleanup()` are not safe to run concurrently on the same `app_dir`**: they rename and rewrite files in place, so two `setup()` calls racing against the same directory can conflict. For parallel test workers, give each worker its own copy of the app directory.
+- **Two elements sharing one physical source line get one shared verdict**: if a UI-construction line contains more than one input/output (e.g. `fluidRow(actionButton("go", "Go"), actionButton("stop", "Stop"))` on a single line), the blended coverage number can only carry one covered/uncovered status for that line. If either element was never interacted with, the whole line shows uncovered, even if the other element on it was. This is an inherent limit of line-based reporting, not a bug: `merge_ui_coverage()` `message()`s when it detects this situation, and `ui_report()`'s per-element table always has the disambiguated, per-element truth regardless of what the blended line-level number shows.
+- **Multiple concurrent `AppDriver`/Cypress sessions against one already-set-up `app_dir`** (e.g. two `AppDriver$new()` calls, each its own child R process, both driving the same app code) are supported. Coverage/manifest/module saves merge with whatever's already on disk rather than overwriting it, specifically so one session's periodic save can't erase another's real, already-executed coverage. (A single Shiny process serving multiple simultaneous browser sessions -- ordinary Shiny multi-session support -- needs no special handling either, since all sessions in one process already share the same counters.)

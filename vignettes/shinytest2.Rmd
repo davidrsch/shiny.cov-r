@@ -1,0 +1,96 @@
+---
+title: "Using shiny.cov with shinytest2"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Using shiny.cov with shinytest2}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>",
+  eval = FALSE
+)
+```
+
+## Setup
+
+`shiny.cov` integrates with shinytest2 automatically. No additional shinytest2-specific configuration is required -- just call `setup()` before running your tests.
+
+```r
+library(shiny.cov)
+library(shinytest2)
+
+# Set up coverage
+shiny.cov::setup("my-app")
+
+# Run tests normally
+shinytest2::test_app("my-app")
+
+# Collect results
+cov <- shiny.cov::collect("my-app")
+covr::report(cov)
+
+# Clean up
+shiny.cov::cleanup("my-app")
+```
+
+## How the integration works
+
+`shinytest2::AppDriver` spawns the Shiny process in a separate R process via `callr::r_bg()`, which calls `shiny::runApp()` on the app directory. `shiny.cov::setup()` renames that directory's entry point (`app.R`, or `ui.R`+`server.R`) to a backup and replaces it with a wrapper, so the very first thing that child process does is load `shiny.cov`'s bootstrap and run the original app code through it -- instrumenting every `source()`d file and every `box::use()`d module, and hooking `shiny::moduleServer()` to record real module namespace boundaries.
+
+The UI manifest (inputs, outputs, tabs, conditional panels) isn't built from that instrumentation pass at all -- it's discovered separately, from the live browser, by `shiny.cov::AppDriver` asking Shiny's own `Shiny.inputBindings`/`Shiny.outputBindings` registry what's actually bound on the page (see `discover_manifest()` below). This works for any widget library, not just base Shiny, since every real input/output must register there for Shiny's client-server protocol to function at all.
+
+shinytest2 also detects the `R_COVR=true` environment variable (which `setup()` sets) and extends `AppDriver$stop()`'s grace period from 500ms to 20 seconds, intended to give the Shiny process time to write coverage data before being killed. In practice this grace period is not always enough -- `onStop()`/`.Last()` shutdown hooks are best-effort and don't reliably fire within it on some platforms/configurations. `shiny.cov` also saves coverage periodically in the background for this reason; don't rely on the shutdown grace period alone.
+
+## Using the AppDriver wrapper
+
+For automatic UI interaction logging, use `shiny.cov::AppDriver` instead of `shinytest2::AppDriver`:
+
+```r
+app <- shiny.cov::AppDriver$new("my-app")
+app$set_inputs(bins = 20)    # Automatically logged
+app$click("go")              # Automatically logged
+```
+
+This wraps the standard `AppDriver` methods (`set_inputs`, `click`, `upload_file`, `get_text`, `get_html`, `get_value`, `set_window_size`) to log each interaction, feeding the UI interaction coverage that gets merged into your coverage object by `collect()`.
+
+It also adds `discover_manifest()`, called automatically right after the app loads (in `initialize()`) and again in `stop()`, writing `.shiny.cov/manifest.json`. Two snapshots, not one: some widget libraries mutate their own element's class list after interaction (confirmed with `shinyWidgets::pickerInput()`, whose distinguishing class is only present before the first value change), so a snapshot taken only at `stop()` can under-report how specifically an element was identified. The two snapshots are merged, preferring whichever one was more specific for a given id -- you don't need to do anything for this; it's automatic.
+
+## Example project structure
+
+```
+my-app/
+├── app.R
+├── R/
+│   └── helpers.R
+└── tests/
+    └── testthat/
+        ├── setup-shinytest2.R
+        └── test-app.R
+```
+
+`setup-shinytest2.R`:
+```r
+shinytest2::load_app_env()
+```
+
+## Troubleshooting
+
+### App fails to start within the load timeout
+
+Instrumentation adds overhead, and `{box}`-heavy apps with many module files add more of it. Increase the load timeout:
+
+```r
+app <- shiny.cov::AppDriver$new("my-app", load_timeout = 60000)
+```
+
+### No coverage file found
+
+This usually means `SHINYCOV_OUTPUT`/`R_COVR` weren't set when the Shiny process started, or the process was killed (e.g. `SIGKILL`) before any save -- periodic or shutdown-triggered -- had a chance to run. Confirm `Sys.getenv("R_COVR")` is `"true"` in your test session before calling `test_app()`/`AppDriver$new()`, and that `shiny.cov::setup()` ran successfully (check its console output for warnings).
+
+### Coverage looks stale or incomplete for a `{box}`/rhino app
+
+Make sure `shiny.cov` is actually **installed** (not just loaded via `pkgload::load_all()`) in whatever R installation the child process uses -- the bootstrap that instruments `box::use()`-loaded modules calls `requireNamespace("shiny.cov")` inside that separate process, which fails silently if only a dev-mode load is available in the parent session. `shiny.cov::setup()` warns about this at setup time if it detects the package isn't installed.

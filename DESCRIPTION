@@ -1,0 +1,43 @@
+Package: shiny.cov
+Type: Package
+Title: UI and Server Coverage for Shiny Apps Tested via UI-Driven Test Frameworks
+Version: 0.0.0.9000
+Authors@R: c(
+    person("David", "Díaz", role = c("aut", "cre", "cph"),
+           email = "daviddrsch@gmail.com")
+    )
+Description: Provides line coverage and UI interaction coverage for Shiny
+    applications tested with UI-driven frameworks such as shinytest2,
+    Cypress, or Playwright (the latter two via companion npm packages,
+    'shiny.cov-cypress' and 'shiny.cov-playwright'). Instruments R code
+    executed inside child Shiny processes,
+    including {box}/rhino modules, using an in-tree AST tracer ported from
+    {covr} rather than calling covr's internal, unexported functions at
+    runtime. Produces standard covr coverage objects compatible with
+    covr::report(), covr::codecov(), and CI coverage services.
+    Builds a UI manifest that catalogs all Shiny inputs, outputs, tabs, and
+    modules, and merges UI interaction coverage directly into the same
+    coverage object as R line coverage.
+License: MIT + file LICENSE
+URL: https://github.com/daviddrsch/shiny.cov-r
+BugReports: https://github.com/daviddrsch/shiny.cov-r/issues
+Encoding: UTF-8
+NeedsCompilation: no
+Imports:
+    covr (>= 3.2.0),
+    jsonlite,
+    R6,
+    shiny (>= 1.7.0),
+    utils
+Suggests:
+    box,
+    chromote,
+    knitr,
+    rlang,
+    rmarkdown,
+    shinytest2 (>= 0.3.0),
+    shinyWidgets,
+    testthat (>= 3.0.0)
+VignetteBuilder: knitr
+Config/testthat/edition: 3
+Config/roxygen2/version: 8.0.0

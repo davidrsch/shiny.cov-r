@@ -1,0 +1,188 @@
+---
+title: "Using shiny.cov with Cypress"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Using shiny.cov with Cypress}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>",
+  eval = FALSE
+)
+```
+
+## Overview
+
+`shiny.cov` supports Cypress end-to-end tests through its companion npm package `shiny.cov-cypress`. The R side handles code instrumentation and coverage collection; the JS side handles interaction logging and server lifecycle.
+
+## Installation
+
+```bash
+npm install --save-dev shiny.cov-cypress
+```
+
+If you're developing `shiny.cov-cypress` itself (working from a local checkout rather than a published version), install it as a real `file:`-protocol dependency in your Cypress project's own `package.json` (`npm install` then creates a `node_modules/shiny.cov-cypress` symlink to your checkout, so edits stay live):
+
+```json
+{
+  "devDependencies": {
+    "shiny.cov-cypress": "file:../path/to/shiny.cov-cypress"
+  }
+}
+```
+
+Don't `require()` it via a raw relative path reaching outside `node_modules` (e.g. `require('../../shiny.cov-cypress/src/support')`) instead -- Cypress's support/spec bundler can serve a persistently stale bundle for files loaded that way, surviving even a full process restart and clearing every Electron/Chromium cache directory. A real `node_modules` dependency doesn't have this problem.
+
+## Cypress configuration
+
+```js
+// cypress.config.js
+const { defineConfig } = require('cypress')
+const shinyCovPlugin = require('shiny.cov-cypress/plugin')
+
+module.exports = defineConfig({
+  e2e: {
+    setupNodeEvents(on, config) {
+      shinyCovPlugin(on, config)
+      return config
+    },
+    // 127.0.0.1, not localhost: shiny::runApp() binds IPv4 127.0.0.1
+    // only, and Node 17+ resolves "localhost" to the IPv6 loopback (::1)
+    // first by default -- on a machine where that doesn't fall back to
+    // IPv4 quickly, wait-on/start-server-and-test times out against a
+    // server that's genuinely up and listening (the R side logs
+    // "Listening on http://127.0.0.1:3333" while start-server-and-test
+    // still times out against "localhost").
+    baseUrl: 'http://127.0.0.1:3333'
+  }
+})
+```
+
+```js
+// cypress/support/e2e.js
+require('shiny.cov-cypress/support')
+```
+
+The plugin resolves where to read/write `manifest.json`/`interactions.json` from `config.env.shinyCovAppDir` (or `shinyCovOutputDir` directly) -- **set this to the same app directory you pass to `shiny.cov::setup()`**, or the two sides will silently look in different places:
+
+```js
+// cypress.config.js
+module.exports = defineConfig({
+  e2e: {
+    setupNodeEvents(on, config) {
+      shinyCovPlugin(on, config)
+      return config
+    },
+    baseUrl: 'http://127.0.0.1:3333',
+    env: {
+      shinyCovAppDir: '../app' // relative to the Cypress project root
+    }
+  }
+})
+```
+
+## Running tests with coverage
+
+The order below matters: `shiny.cov::setup()` has to run *before* the app process ever starts -- it's what renames `app.R` and writes the `.Rprofile` bootstrap that the `SHINYCOV_OUTPUT`/`R_COVR` environment variables actually depend on. Starting the app first and calling `setup()` afterwards doesn't error -- it just means that run's app was never instrumented, and `collect()` reads back an empty coverage file with no indication of what went wrong.
+
+### 1. Set up the R side
+
+```r
+# setup-coverage.R
+shiny.cov::setup("app")
+```
+
+```bash
+Rscript setup-coverage.R
+```
+
+### 2. Start the Shiny app and run Cypress together
+
+Use [`start-server-and-test`](https://www.npmjs.com/package/start-server-and-test) with [`cross-env`](https://www.npmjs.com/package/cross-env) (add both as your own devDependencies) to start the app with `SHINYCOV_OUTPUT`/`R_COVR` set -- the `.Rprofile` bootstrap `setup()` just wrote looks for these -- and run Cypress against it:
+
+```r
+# start-app.R
+shiny::runApp("app", port = 3333, host = "127.0.0.1")
+```
+
+```json
+// package.json scripts
+{
+  "setup-coverage": "Rscript setup-coverage.R",
+  "start-app": "npm run setup-coverage && cross-env SHINYCOV_OUTPUT=app/.shiny.cov/coverage.rds R_COVR=true Rscript start-app.R",
+  "cypress:run": "cypress run",
+  "test-e2e-coverage": "start-server-and-test start-app http://127.0.0.1:3333 cypress:run",
+  "posttest-e2e-coverage": "Rscript collect-coverage.R"
+}
+```
+
+```bash
+npm run test-e2e-coverage
+```
+
+(Using real `.R` script files instead of `Rscript -e "..."` one-liners avoids shell-specific quoting issues across `cmd.exe`/PowerShell/bash.)
+
+If a run fails partway through (server timeout, a failing test, `Ctrl+C`), `app.R` is left wrapped and the next `setup()` call refuses to run until you clean it up (see "Setup interrupted" in Troubleshooting below). Add a `pretest-e2e-coverage` npm hook -- npm runs this automatically before `test-e2e-coverage`, matched by name -- so every run starts from a clean slate regardless of how the previous one ended:
+
+```json
+{
+  "scripts": {
+    "cleanup-coverage": "Rscript -e \"shiny.cov::cleanup('app')\"",
+    "pretest-e2e-coverage": "npm run cleanup-coverage"
+  }
+}
+```
+
+### 3. Collect coverage
+
+```r
+# collect-coverage.R
+cov <- shiny.cov::collect("app")
+covr::report(cov)       # HTML report; UI interaction coverage already merged in
+shiny.cov::ui_report(cov) # per-element breakdown, if you want the detail
+shiny.cov::cleanup("app")
+```
+
+Wiring this up as the `posttest-e2e-coverage` npm script above (an npm lifecycle hook that runs automatically after `test-e2e-coverage`, matched by name) means `npm run test-e2e-coverage` alone does the whole cycle.
+
+## Interaction logging
+
+Log each interaction explicitly, right after the real Cypress command, with `cy.shinyCovInteract(selector, action, value)`:
+
+```js
+cy.get('#name').type('Alice')
+cy.shinyCovInteract('#name', 'type', 'Alice')
+
+cy.get('#go').click()
+cy.shinyCovInteract('#go', 'click')
+```
+
+Use one of the recognized action names (`set_inputs`, `click`, `upload_file`, `get_value`, `type`, `select`, `check`, `uncheck` for inputs; `get_text`/`get_html` for output verification) so it's actually counted. There's no automatic logging via overridden `cy.click()`/`cy.type()`/etc. commands -- every attempt at that turned out to be fragile in ways specific to Cypress's own command queue and actionability-retry internals that only a real browser run exposed (see the "Auto-log overrides: removed" comment in `shiny.cov-cypress/src/support.js` for the full history); the explicit call above is the one mechanism that's actually held up.
+
+The interaction log is written to `.shiny.cov/interactions.json` after the test run and merged into the coverage object by `shiny.cov::collect()`.
+
+## How it works
+
+Unlike shinytest2 (which uses `callr`), Cypress starts the Shiny process via a regular shell command. This means R's normal startup sequence runs, including sourcing `.Rprofile` from the app directory. The `.Rprofile` snippet added by `shiny.cov::setup()` detects `SHINYCOV_OUTPUT` and loads the bootstrap, which instruments `source()`d files and `box::use()`d modules, hooks `shiny::moduleServer()` to record real module boundaries, and periodically saves coverage in the background in addition to trying to save on graceful shutdown.
+
+The UI manifest works differently here than you might expect: the R side does *not* build or write it for the Cypress path. Instead, `cy.shinyCovDiscoverManifest()` -- called automatically after every test via a global `afterEach()` hook `require('shiny.cov-cypress/support')` installs -- asks the live browser's own `Shiny.inputBindings`/`Shiny.outputBindings` registry what's actually bound on the page, right there in the browser, and sends the result to a Cypress task that writes `.shiny.cov/manifest.json`. Cypress runs the *literal same file* the R/shinytest2 side does: `shiny.cov-r/inst/js/discover-bindings.js` is vendored into `shiny.cov-cypress/src/vendor/discover-bindings-source.js` (regenerated via `shiny.cov-cypress/scripts/sync-discover-bindings.js`, and a test asserts the vendored copy hasn't drifted from the canonical source) and evaluated inside the app's own `window` via `win.eval()`. This works for any widget library, not just base Shiny -- every real Shiny input/output must register with that registry for Shiny's client-server protocol to function at all, regardless of who built it.
+
+One limitation is specific to evaluating the script this way: `win.eval()` runs subject to the app's own Content-Security-Policy, unlike shinytest2's CDP-based `Runtime.evaluate()`, which bypasses page CSP entirely. Cypress strips CSP by default, so in practice this only matters for a project that has explicitly opted into `experimentalCspAllowList: true` with a strict `script-src` -- a rare configuration, not a common failure mode.
+
+## Troubleshooting
+
+### Manifest not found
+
+`cy.shinyCovManifest()` reads back `.shiny.cov/manifest.json`, written by `cy.shinyCovDiscoverManifest()` (see above -- there is no HTTP endpoint for this, and the R side doesn't write it on this path). If it's missing, interaction logging still works but the UI coverage report won't show which elements exist. This almost always means either the Cypress plugin resolved a different directory than `shiny.cov::setup()` used (see the `shinyCovAppDir` configuration above), or `require('shiny.cov-cypress/support')` was never loaded in `cypress/support/e2e.js`, so the automatic `afterEach()` discovery never ran.
+
+### Coverage file empty or stale
+
+Coverage is saved periodically in the background (roughly every two seconds) as well as on graceful shutdown, so even a `SIGKILL`'d process should only lose the last couple of seconds of interaction. If the file is completely empty, check that `SHINYCOV_OUTPUT` and `R_COVR=true` were actually set on the R process -- see the `cross-env` step above; a hand-rolled start command needs to set them explicitly, and setting them without having called `setup()` first doesn't error, it just leaves the app uninstrumented.
+
+### Setup interrupted
+
+If a previous run died partway through -- a server timeout, a failing test, `Ctrl+C` -- `app.R` can be left wrapped with no automatic recovery. `shiny.cov::setup()` detects this (a leftover `*.shinycov_backup` file) and refuses to run rather than risking a double-wrap, with an error pointing at `shiny.cov::cleanup()`. Wiring `cleanup()` as a `pretest-e2e-coverage` npm hook (see "Run tests with coverage" above) means this resolves itself automatically on the next run instead of needing a manual `shiny.cov::cleanup("app")` call.

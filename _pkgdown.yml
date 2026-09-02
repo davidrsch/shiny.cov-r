@@ -1,0 +1,34 @@
+url: https://daviddrsch.github.io/shiny.cov-r
+template:
+  bootstrap: 5
+
+reference:
+  - title: Setup and teardown
+    contents:
+      - setup
+      - cleanup
+  - title: Coverage collection
+    contents:
+      - collect
+      - covr_r
+      - report
+      - ui_report
+  - title: shinytest2 integration
+    contents:
+      - AppDriver
+
+articles:
+  - title: Getting started
+    navbar: Getting started
+    contents:
+      - shiny.cov
+  - title: Test frameworks
+    navbar: Test frameworks
+    contents:
+      - shinytest2
+      - cypress
+      - playwright
+  - title: App types
+    navbar: App types
+    contents:
+      - rhino

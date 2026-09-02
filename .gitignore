@@ -1,0 +1,36 @@
+# R
+.Rproj.user
+.Rhistory
+.RData
+.Ruserdata
+*.Rproj
+.Rlib/
+
+# shiny.cov coverage output
+.shiny.cov/
+coverage.rds
+coverage-report.html
+*.shinycov_backup
+
+# Shiny's local dependency cache, copied in whenever an app is run
+# locally (bootstrap/jquery/datatables/etc.) -- not source, regenerated
+# automatically by shiny::runApp() every time.
+lib/
+
+# ad hoc run logs/output from manual testing
+*_output.txt
+
+# R package build artifacts
+shiny.cov.Rcheck/
+shiny.cov*.tar.gz
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db

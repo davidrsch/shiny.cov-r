@@ -1,0 +1,86 @@
+---
+title: "Using shiny.cov with {box} and rhino apps"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Using shiny.cov with {box} and rhino apps}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>",
+  eval = FALSE
+)
+```
+
+## Why this needs its own mechanism
+
+[rhino](https://appsilon.github.io/rhino/) apps (and any app using [`{box}`](https://klmr.me/box/) modules directly) load their code through `box::use()`, not `base::source()`. `shiny.cov`'s `source()` override never sees that code at all, so it needs a second, separate hook.
+
+There's also a real, existing tool for *part* of this problem: `covr::package_coverage()` (or rhino's own `rhino::covr_r()` wrapper around `covr::file_coverage()`) already gives genuinely exact, real branch-level R coverage for a rhino app's server-side logic -- when tests are written with `shiny::testServer()`, which runs the server function directly in-process with no browser and no separate R process involved. If that's all you need, use `rhino::covr_r()` directly; `shiny.cov` isn't necessary for it and doesn't try to replace it.
+
+Where `rhino::covr_r()` can't help at all is real UI-driven testing -- `shinytest2::AppDriver`, Cypress, or Playwright, which all spawn the Shiny process in a genuinely separate process to serve a real browser. That's exactly the case `shiny.cov` exists for, and it now works for `{box}`/rhino apps too, not just plain `app.R` apps.
+
+## Setup
+
+No different from a plain app -- `shiny.cov::setup()` detects rhino's `app.R` (which is just `rhino::app()`) the same way it detects any other `app.R`:
+
+```r
+shiny.cov::setup("my-rhino-app")
+
+app <- shiny.cov::AppDriver$new("my-rhino-app")
+app$set_inputs("app-name" = "Alice")
+app$click(selector = "#app-greet")
+app$stop()
+
+cov <- shiny.cov::collect("my-rhino-app")
+covr::report(cov)
+```
+
+## How it works
+
+The bootstrap patches `box:::load_from_source()` -- the function `{box}` itself uses to parse and evaluate every module file -- so each module gets the same branch-level instrumentation (shiny.cov's own AST tracer, ported in-tree from `{covr}` -- see `R/trace.R`) as a `source()`d file, surgically (only the parse-and-eval step is replaced; `{box}`'s own export scanning and S3 method registration are left alone).
+
+For the UI manifest: a rhino app's `ui` is a `function(id)`, not a static tag object, and it's never a top-level variable anywhere reachable from the app's entry point -- it lives inside `app/main.R`'s own module namespace, which would make it awkward to find by inspecting R-side code at all. `shiny.cov` doesn't try to -- the manifest is discovered from the *live browser* instead, by asking Shiny's own `Shiny.inputBindings`/`Shiny.outputBindings` registry what's actually rendered on the page (see `vignette("shinytest2")`/`vignette("cypress")`). This works identically for a rhino app's namespaced ids (`"app-name"`, `"app-greet"`, ...) as for any other app -- the discovery script doesn't know or care that `ui` was a function living inside a module namespace, only what actually ended up in the DOM.
+
+Module boundaries (`manifest$modules`, and each element's `module` field) come from a `shiny::moduleServer()` hook instead, recording the real namespace prefix (e.g. `"app"`) at the point `logic$welcome_server(id)` calls it -- ground truth, not inferred from splitting an id on `-`.
+
+## Action buttons and other widgets are fully discovered
+
+Earlier versions of `shiny.cov` discovered inputs/outputs by matching Shiny's `shiny-input-container` CSS class in the server-side R tag tree, which `shiny::actionButton()` doesn't use -- so a rhino module's `greet`/`reset` buttons never showed up in the manifest.
+
+The browser-registry discovery described above doesn't have this gap: every real Shiny input, including action buttons, must register with `Shiny.inputBindings` for Shiny's client-server protocol to work at all, so it's found the same way any other input is, with zero special-casing. This also means it isn't limited to base Shiny widgets -- a rhino app using a third-party widget library (`shinyWidgets`, `shiny.fluent`, or any custom `Shiny.inputBindings.register()` call) is discovered the exact same way.
+
+## Example: box module structure
+
+```
+my-rhino-app/
+├── app.R              # rhino::app()
+├── rhino.yml
+├── config.yml
+├── app/
+│   ├── main.R          # ui <- function(id) {...}; server <- function(id) {...}
+│   ├── static/
+│   ├── logic/
+│   │   └── welcome.R    # #' @export
+│   │                      welcome_server <- function(id) {...}
+│   └── view/
+│       └── welcome.R    # #' @export
+│                          welcome_ui <- function(id) {...}
+└── tests/
+    └── testthat/
+        ├── setup-shinytest2.R
+        └── test-app.R
+```
+
+## Troubleshooting
+
+### Coverage is empty or only covers definitions, never reactive code
+
+Confirm `shiny.cov` is actually **installed**, not just loaded via `pkgload::load_all()` -- the box hook runs inside the child process, which needs `requireNamespace("shiny.cov")` to succeed there independently of the parent session. `shiny.cov::setup()` warns about this at setup time.
+
+### `box::use()` fails with "unable to load module"
+
+This is a `{box}`/rhino configuration issue, not a `shiny.cov` one -- `box.path` needs to be set to the project root (rhino apps normally do this via `.Rprofile`: `options(box.path = getwd())`). Confirm `box::use()` works for your app *without* `shiny.cov::setup()` involved before reporting a coverage issue.
