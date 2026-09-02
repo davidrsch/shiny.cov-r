@@ -57,13 +57,20 @@
   function discover(registry) {
     var results = [];
     if (!registry || !registry.bindingNames) return results;
+    // Shiny bindings are written against a jQuery scope: shiny.react,
+    // htmlwidgets' plotly/datatables, etc. call scope.find() / $(scope).find()
+    // and throw on a raw DOM document. Wrap it in jQuery when present (every
+    // Shiny app ships jQuery) so those bindings are discoverable.
+    var scope = (typeof jQuery !== "undefined" && jQuery.fn && jQuery.fn.jquery)
+      ? jQuery(document)
+      : document;
     var names = registry.bindingNames;
     for (var name in names) {
       if (!Object.prototype.hasOwnProperty.call(names, name)) continue;
       var binding = names[name].binding;
       var els;
       try {
-        els = binding.find(document);
+        els = binding.find(scope);
       } catch (e) {
         continue;
       }
