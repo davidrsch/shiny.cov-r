@@ -300,3 +300,81 @@ source_counts <- function(cov) {
     )
   }))
 }
+
+#' Per-source per-line coverage
+#'
+#' Returns a data frame with one row per measured `(file, line)` and one
+#' column per test source giving that source's hit count, plus a `total`
+#' column. Requires the coverage object to carry per-source data (see
+#' [collect()]).
+#'
+#' @param cov A coverage object returned by [collect()].
+#' @return A `data.frame`, or `NULL` when no per-source data is present.
+#' @export
+source_coverage <- function(cov) {
+  sources <- attr(cov, "shinycov_sources", exact = TRUE)
+  if (is.null(sources)) {
+    df <- covr::tally_coverage(cov, by = "line")
+    agg <- stats::aggregate(df$value, by = list(filename = df$filename, line = df$line), FUN = min)
+    names(agg)[3] <- "total"
+    return(agg[order(agg$filename, agg$line), ])
+  }
+
+  out <- NULL
+  for (src in names(sources)) {
+    env <- reconstruct_counters(sources[[src]])
+    cov_s <- build_coverage(env)
+    class(cov_s) <- c("coverage", "list")
+    df <- covr::tally_coverage(cov_s, by = "line")
+    agg <- stats::aggregate(df$value, by = list(filename = df$filename, line = df$line), FUN = min)
+    names(agg)[3] <- src
+    out <- if (is.null(out)) agg else merge(out, agg, by = c("filename", "line"), all = TRUE)
+  }
+  src_cols <- names(sources)
+  for (s in src_cols) out[[s]][is.na(out[[s]])] <- 0L
+  out$total <- rowSums(out[src_cols])
+  out[order(out$filename, out$line), , drop = FALSE]
+}
+
+#' Write a self-contained per-source coverage report
+#'
+#' Writes a simple, self-contained HTML table (one row per file/line, one
+#' column per test source) plus a JSON sidecar -- no external assets, so it
+#' can be uploaded/downloaded as a single artifact and opened anywhere.
+#'
+#' @param cov A coverage object returned by [collect()].
+#' @param file Output `.html` path (default `"coverage-by-source.html"`).
+#' @return Invisibly returns `file`.
+#' @export
+source_report <- function(cov, file = "coverage-by-source.html") {
+  df <- source_coverage(cov)
+  if (is.null(df)) {
+    message("shiny.cov: no per-source coverage data to report.")
+    return(invisible(NULL))
+  }
+  cols <- names(df)
+  header <- paste0("<th>", cols, "</th>", collapse = "")
+  rows <- paste(vapply(seq_len(nrow(df)), function(i) {
+    r <- df[i, ]
+    tds <- paste0(
+      "<td>",
+      vapply(seq_along(r), function(j) as.character(r[[j]]), character(1)),
+      "</td>",
+      collapse = ""
+    )
+    paste0("<tr>", tds, "</tr>")
+  }, character(1)), collapse = "\n")
+  html <- paste0(
+    "<!DOCTYPE html><html><head><meta charset='utf-8'><style>",
+    "body{font-family:monospace}table{border-collapse:collapse;font-size:12px}",
+    "td,th{border:1px solid #ccc;padding:2px 8px}",
+    "td:last-child{font-weight:bold}",
+    "</style></head><body><h2>coverage by source</h2><table><tr>",
+    header, "</tr>", rows, "</table></body></html>"
+  )
+  writeLines(html, file)
+  if (requireNamespace("jsonlite", quietly = TRUE)) {
+    jsonlite::write_json(df, sub("\\.html$", ".json", file), pretty = TRUE)
+  }
+  invisible(file)
+}
