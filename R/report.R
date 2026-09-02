@@ -72,7 +72,7 @@ render_report_html_covr <- function(cov, ui, file) {
   files = $('div#files div');
   files.not('div.hidden').addClass('hidden');
   id = $(this).text();
-  files.filter('div[id=\'' + id + '\']').removeClass('hidden');
+  files.filter('div[id=\\'' + id + '\\']').removeClass('hidden');
   $('ul.nav a[data-value=Source]').text(id).tab('show');
 });")
   pkg <- attr(cov, "package")$package %||% "shiny.cov"

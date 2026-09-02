@@ -38,3 +38,24 @@ test_that("render_source_table annotates hit counts with per-source breakdown", 
   # The never-tracked comment line gets no annotation.
   expect_equal(lengths(regmatches(html, gregexpr("cypress=", html, fixed = TRUE))), 2L)
 })
+
+test_that("covr-style report keeps DataTables callback valid (no lost backslashes)", {
+  skip_if_not_installed("DT")
+  skip_if_not_installed("htmltools")
+  inst <- instrument_file(testthat::test_path("fixtures", "simple-app", "app.R"))
+  env <- new.env()
+  eval_instrumented(inst, env)
+  cov <- build_coverage(inst$counters)
+  class(cov) <- c("coverage", "list")
+  attr(cov, "shinycov_sources") <- list(cypress = as.list(inst$counters), shinytest2 = as.list(inst$counters))
+
+  tmp <- tempfile(fileext = ".html")
+  on.exit(unlink(tmp), add = TRUE)
+  render_report_html_covr(cov, NULL, tmp)
+  ln <- grep("files.filter", readLines(tmp, warn = FALSE), value = TRUE)
+  frag <- regmatches(ln, regexec("files.filter[^\"]*", ln))[[1]]
+  # The JS selector must keep its escaped quotes; a dropped backslash would
+  # leave '' (empty strings), a JS syntax error that blanks the Files table.
+  expect_false(grepl("''", frag, fixed = TRUE))
+  expect_true(grepl("\\\\", frag))
+})
