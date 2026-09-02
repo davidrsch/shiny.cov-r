@@ -104,6 +104,19 @@ AppDriver <- R6::R6Class(
     #'   why an early snapshot matters, not just the one taken at `stop()`.
     #' @param ... Passed to `shinytest2::AppDriver$initialize()`.
     initialize = function(...) {
+      # Tag this run's coverage by source ("shinytest2") so collect() can
+      # report per-source counts. The child app process launched by
+      # shinytest2 inherits this env var at spawn time; restore the parent's
+      # previous value once the app is up.
+      old_source <- Sys.getenv("SHINYCOV_SOURCE", unset = "")
+      Sys.setenv(SHINYCOV_SOURCE = "shinytest2")
+      on.exit({
+        if (nzchar(old_source)) {
+          Sys.setenv(SHINYCOV_SOURCE = old_source)
+        } else {
+          Sys.unsetenv("SHINYCOV_SOURCE")
+        }
+      }, add = TRUE)
       super$initialize(...)
       tryCatch(self$discover_manifest(), error = function(e) {
         message("shiny.cov: initial UI discovery failed: ", conditionMessage(e))
