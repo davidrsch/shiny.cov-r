@@ -32,6 +32,8 @@ Imports:
 Suggests:
     box,
     chromote,
+    DT,
+    htmltools,
     knitr,
     rlang,
     rmarkdown,

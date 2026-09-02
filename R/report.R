@@ -1,14 +1,16 @@
 #' Generate a coverage report
 #'
-#' Produces a self-contained HTML report showing, per source file, every
-#' line with its hit count in the left gutter -- including a per-test-source
-#' breakdown (`total (cypress=N shinytest2=M)`) when the run was tagged with
-#' `SHINYCOV_SOURCE` -- plus the per-element UI breakdown. `x` already has UI
-#' interaction coverage merged directly into it (see [merge_ui_coverage()]),
-#' so [covr::percent_coverage(x)] and this report are one blended number.
+#' Produces a covr-style HTML report with a per-file overview (`Files` tab)
+#' and a per-file source view (`Source` tab). In the source view the hit
+#' count for every line is annotated with its per-test-source breakdown
+#' (`2 (cypress=1 shinytest2=1)`) whenever the run was tagged with
+#' `SHINYCOV_SOURCE`. `x` already has UI interaction coverage merged
+#' directly into it (see [merge_ui_coverage()]), so
+#' [covr::percent_coverage(x)] and this report are one blended number.
 #'
 #' @param x A coverage object returned by [collect()].
-#' @param file Output `.html` path (default `"coverage-report/index.html"`).
+#' @param file Output `.html` path (default `"coverage-report/index.html"`;
+#'   dependencies are written to a `lib/` directory alongside it).
 #' @param app_dir Path to the app directory for the UI manifest and
 #'   interaction log. Defaults to `"."`.
 #' @param ... Ignored (kept for compatibility).
@@ -38,6 +40,112 @@ report <- function(x, file = "coverage-report/index.html", app_dir = ".", ...) {
 }
 
 render_report_html <- function(cov, ui, file) {
+  out <- tryCatch(render_report_html_covr(cov, ui, file), error = function(e) NULL)
+  if (is.null(out)) {
+    return(render_report_html_simple(cov, ui, file))
+  }
+  invisible(out)
+}
+
+render_report_html_covr <- function(cov, ui, file) {
+  if (!requireNamespace("htmltools", quietly = TRUE) ||
+      !requireNamespace("DT", quietly = TRUE)) {
+    stop("htmltools/DT unavailable")
+  }
+
+  data <- covr:::to_report_data(cov)
+  src <- source_coverage(cov)
+  source_cols <- setdiff(names(src), c("filename", "line", "total"))
+
+  color_coverage_callback <- DT::JS("function(td, cellData, rowData, row, col) {
+  var percent = cellData.replace('%', '');
+  if (percent > 90) {
+    var grad = 'linear-gradient(90deg, #edfde7 ' + cellData + ', white ' + cellData + ')';
+  } else if (percent > 75) {
+    var grad = 'linear-gradient(90deg, #f9ffe5 ' + cellData + ', white ' + cellData + ')';
+  } else {
+    var grad = 'linear-gradient(90deg, #fcece9 ' + cellData + ', white ' + cellData + ')';
+  }
+  $(td).css('background', grad);
+}")
+  file_choice_callback <- DT::JS("table.on('click.dt', 'a', function() {
+  files = $('div#files div');
+  files.not('div.hidden').addClass('hidden');
+  id = $(this).text();
+  files.filter('div[id=\'' + id + '\']').removeClass('hidden');
+  $('ul.nav a[data-value=Source]').text(id).tab('show');
+});")
+  pkg <- attr(cov, "package")$package %||% "shiny.cov"
+  percentage <- sprintf("%02.2f%%", data$overall)
+
+  table <- DT::datatable(data$file_stats, escape = FALSE, fillContainer = FALSE,
+    options = list(searching = FALSE, dom = "t", paging = FALSE,
+      columnDefs = list(list(targets = 6, createdCell = color_coverage_callback))),
+    rownames = FALSE, class = "row-border", callback = file_choice_callback)
+  table$sizingPolicy$defaultWidth <- "100%"
+  table$sizingPolicy$defaultHeight <- NULL
+
+  ui_html <- covr:::fluid_page(
+    htmltools::includeCSS(system.file("www/report.css", package = "covr")),
+    covr:::column(8, offset = 2, size = "md",
+      htmltools::HTML(paste0("<h2>", pkg, " coverage - ", percentage, "</h2>")),
+      covr:::tabset_panel(
+        covr:::tab_panel("Files", table),
+        covr:::tab_panel("Source", covr:::addHighlight(
+          render_source_table(data$full, src, source_cols)
+        ))
+      )
+    )
+  )
+  dir.create(dirname(file), showWarnings = FALSE, recursive = TRUE)
+  htmltools::save_html(ui_html, file)
+  invisible(file)
+}
+
+render_source_table <- function(full, src, source_cols) {
+  has_src <- length(source_cols) > 0 && !is.null(src)
+  htmltools::div(id = "files", Map(function(lines, file) {
+    sub <- if (has_src) src[src$filename == file, , drop = FALSE] else NULL
+    htmltools::div(id = file, class = "hidden",
+      htmltools::tags$table(class = "table-condensed",
+        htmltools::tags$tbody(lapply(seq_len(NROW(lines)), function(row_num) {
+          line_no <- lines[row_num, "line"]
+          coverage <- lines[row_num, "coverage"]
+          cov_type <- NULL
+          if (coverage == 0) {
+            cov_value <- "!"
+            cov_type <- "missed"
+          } else if (coverage > 0) {
+            cov_value <- htmltools::HTML(paste0(lines[row_num, "coverage"],
+                                                "<em>x</em>", collapse = ""))
+            cov_type <- "covered"
+          } else {
+            cov_value <- ""
+            cov_type <- "never"
+          }
+          note <- NULL
+          if (has_src && !is.null(sub) && coverage != "") {
+            vals <- sub[sub$line == line_no, source_cols, drop = FALSE]
+            if (nrow(vals) == 1) {
+              note <- htmltools::tags$small(paste0(
+                " (", paste(paste0(source_cols, "=",
+                                   format(unlist(vals), trim = TRUE)), collapse = " "), ")"
+              ))
+            }
+          }
+          htmltools::tags$tr(class = cov_type,
+            htmltools::tags$td(class = "num", line_no),
+            htmltools::tags$td(class = "coverage", cov_value, note),
+            htmltools::tags$td(class = "col-sm-12",
+              htmltools::pre(class = "language-r", lines[row_num, "source"])))
+        }))))
+  }, lines = full, file = names(full)),
+  htmltools::tags$script("$('div#files pre').each(function(i, block) {
+    hljs.highlightBlock(block);
+});"))
+}
+
+render_report_html_simple <- function(cov, ui, file) {
   pct <- covr::percent_coverage(cov)
   df <- source_coverage(cov)
   source_cols <- setdiff(names(df), c("filename", "line", "total"))
