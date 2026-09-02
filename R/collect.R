@@ -423,10 +423,21 @@ merge_ui_coverage <- function(cov, app_dir) {
     # matches as a literal string -- otherwise e.g. "a.b" would also match
     # "aXb", and "a(b" would throw an unguarded "invalid regular
     # expression" error.
-    pattern <- sprintf('["\']%s["\']', regex_escape(id))
-    for (f in names(file_lines)) {
-      matched <- which(vapply(file_lines[[f]], function(l) grepl(pattern, l), logical(1)))
-      if (length(matched) > 0) return(list(file = f, line = matched[[1]]))
+    #
+    # Some frameworks report a DOM id that never appears verbatim in the R
+    # source: shiny.fluent appends `-input` and Shiny namespaces the id
+    # (e.g. `app-inputs-kpi_years-input`), while the source only contains
+    # the local id passed to ns() (`ns("kpi_years")`). Try progressively
+    # less-qualified forms so these still map back to their source line.
+    stripped <- sub("-input$", "", id)
+    candidates <- unique(c(id, stripped, sub("^.*-", "", stripped)))
+    for (cid in candidates) {
+      if (!nzchar(cid)) next
+      pattern <- sprintf('["\']%s["\']', regex_escape(cid))
+      for (f in names(file_lines)) {
+        matched <- which(vapply(file_lines[[f]], function(l) grepl(pattern, l), logical(1)))
+        if (length(matched) > 0) return(list(file = f, line = matched[[1]]))
+      }
     }
     NULL
   }
