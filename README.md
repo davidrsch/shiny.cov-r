@@ -1,41 +1,57 @@
 # shiny.cov
 
-Monorepo for the shiny.cov project — real end-to-end coverage (server lines + browser-verified UI interaction, blended into one number) for Shiny apps, in R or Python.
+UI and server coverage for Shiny apps tested with shinytest2, [Cypress](https://github.com/davidrsch/shiny.cov-cypress), or [Playwright](https://github.com/davidrsch/shiny.cov-playwright). shinytest2 support is built directly into this package; Cypress and Playwright each need their own companion npm package installed alongside it (linked above) -- neither works without this R package also installed, since the R side does the actual code instrumentation and coverage collection.
 
-## Packages
+## Installation
 
-**Two independent cores, one per language — they don't depend on each other, and share nothing beyond the `shiny.cov` name and a vendored copy of the same browser-side UI-discovery script.** Each core can drive multiple UI-testing frameworks; some frameworks are supported natively, others need a companion adapter package installed alongside the core (see each row below). This isn't a closed list — more frameworks can be added to either core over time without changing this structure.
+```r
+# From GitHub (once published)
+remotes::install_github("davidrsch/shiny.cov-r")
+```
 
-### R Shiny
+## Quick start
 
-| Package | Language | Purpose |
-|---|---|---|
-| [shiny.cov](./shiny.cov-r/) | R | Core instrumentation, coverage collection, reporting. shinytest2 support is built in; Cypress/Playwright support requires the companion adapters below. |
-| [shiny.cov-cypress](./shiny.cov-cypress/) | JavaScript | Cypress adapter for the shiny.cov R package — required alongside it for Cypress-driven tests, not usable standalone. |
-| [shiny.cov-playwright](./shiny.cov-playwright/) | JavaScript | Playwright adapter for the shiny.cov R package — required alongside it for Playwright-driven tests, not usable standalone. |
+```r
+library(shiny.cov)
 
-### Python Shiny (py-shiny)
+# 1. Set up coverage instrumentation
+shiny.cov::setup("my-shiny-app")
 
-| Package | Language | Purpose |
-|---|---|---|
-| [shiny.cov](./shiny.cov-py/) | Python | pytest plugin for py-shiny apps — server + UI coverage blended into one number. Playwright support is built in (no separate adapter exists or is needed); fully independent of the R package above and of `shiny.cov-playwright` (a different package, for R apps only, despite the name overlap). |
+# 2. Run your tests
+shinytest2::test_app("my-shiny-app/tests/shinytest2")
 
-## Examples
+# 3. Collect coverage
+cov <- shiny.cov::collect("my-shiny-app")
 
-| Directory | Purpose |
+# 4. View the report
+covr::report(cov)
+
+# 5. Clean up
+shiny.cov::cleanup("my-shiny-app")
+```
+
+## How it works
+
+`shiny.cov::setup()` renames the app's entry point (`app.R`, or the `ui.R`+`server.R` pair) to a backup and writes a wrapper in its place that loads a bootstrap script before running the original code. The bootstrap:
+
+- Instruments every file loaded via `source()`, and every module loaded via `box::use()` (so `{box}`/rhino apps are covered too), with real branch-level AST instrumentation via an in-tree tracer ported from `{covr}` (see `R/trace.R`) rather than calling `covr:::` internals at runtime -- not just "did this file load," but which branches actually ran, without depending on covr's unexported internals staying stable across versions.
+- Discovers the UI manifest (inputs, outputs, tabs, conditional panels) from a live browser, by asking Shiny's own `Shiny.inputBindings`/`Shiny.outputBindings` registry what's actually bound on the page -- this works for any widget library (`shinyWidgets`, `shiny.fluent`, ...) without `shiny.cov` needing to know it exists, and regardless of whether `ui` is a static object or a function (as it always is for `{box}`/rhino apps).
+- Merges UI interaction coverage directly into the same coverage object as R line coverage: an input/output that was never interacted with shows up as uncovered on its own source line, the same way an untested branch does. There's one coverage number, not two.
+- Persists counters to `coverage.rds` on graceful shutdown, and also periodically in the background -- graceful shutdown isn't fully reliable across test frameworks/platforms, so an abrupt kill loses at most a couple of seconds of the most recent interaction instead of the whole session.
+
+For Cypress, which starts the Shiny process via a plain shell command instead of `callr`, `setup()` also injects a `.Rprofile` snippet as a fallback so the bootstrap still activates.
+
+## API
+
+| Function | Purpose |
 |---|---|
-| [examples/shinytest2](./examples/shinytest2/) | Plain `app.R` driven by shinytest2 |
-| [examples/cypress](./examples/cypress/) | Plain `app.R` driven by Cypress |
-| [rhinoApp](./rhinoApp/) | Real `{box}`/rhino app, driven by shinytest2 (`run_shinycov_e2e.R`) |
-| [rhino-cypress-e2e](./rhino-cypress-e2e/) | The same rhino app, driven by a real Cypress browser instead |
-| [shiny.cov-py/examples/minimal_app](./shiny.cov-py/examples/minimal_app/) | Plain py-shiny app driven by `shiny.cov` (Python) + Playwright |
-
-## Design
-
-See [`shiny.cov-design.md`](./shiny.cov-design.md) for the original architectural design and rationale (predates the
-project's rename to shiny.cov — package/directory names in that document are stale). Note that the implementation has
-since diverged from that document in several places (see its "Implementation notes" addendum) — the `shiny.cov` (R)
-package README is the accurate reference for current behavior.
+| `setup(app_dir)` | Instrument app, write bootstrap, set env vars |
+| `collect(app_dir)` | Read coverage.rds, return a `covr` coverage object with UI coverage merged in |
+| `covr_r(app_dir, ...)` | One call: `setup()`, run tests via `shinytest2::test_app()`, `collect()`, `cleanup()` -- returns the coverage object |
+| `report(cov)` | Generate the combined HTML report (delegates to `covr::report()`) plus a per-element UI breakdown |
+| `ui_report(cov)` | Per-element UI interaction breakdown on its own |
+| `cleanup(app_dir)` | Remove temp files, restore the original entry point and `.Rprofile` |
+| `AppDriver` | `shinytest2::AppDriver` subclass that automatically logs UI interactions |
 
 ## License
 

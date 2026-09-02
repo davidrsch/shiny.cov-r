@@ -19,8 +19,8 @@ Description: Provides line coverage and UI interaction coverage for Shiny
     modules, and merges UI interaction coverage directly into the same
     coverage object as R line coverage.
 License: MIT + file LICENSE
-URL: https://github.com/daviddrsch/shiny.cov-r
-BugReports: https://github.com/daviddrsch/shiny.cov-r/issues
+URL: https://github.com/davidrsch/shiny.cov-r
+BugReports: https://github.com/davidrsch/shiny.cov-r/issues
 Encoding: UTF-8
 NeedsCompilation: no
 Imports:
