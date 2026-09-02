@@ -43,6 +43,28 @@ test_that("render_source_table adds per-source columns with a fixed header", {
   expect_true(grepl("<td class=\"source-col\">0</td>", html, fixed = TRUE))
 })
 
+test_that("source_coverage total equals the sum of per-source columns", {
+  inst <- instrument_file(testthat::test_path("fixtures", "simple-app", "app.R"))
+  env <- new.env()
+  eval_instrumented(inst, env)
+  counters <- as.list(inst$counters)
+
+  cov <- build_coverage(inst$counters)
+  class(cov) <- c("coverage", "list")
+  attr(cov, "shinycov_sources") <- list(cypress = counters, shinytest2 = counters)
+
+  df <- source_coverage(cov)
+  src_cols <- setdiff(names(df), c("filename", "line", "total"))
+  total <- suppressWarnings(as.numeric(df$total))
+  total[is.na(total)] <- 0
+  per_sum <- rowSums(sapply(src_cols, function(s) {
+    x <- suppressWarnings(as.numeric(df[[s]]))
+    x[is.na(x)] <- 0
+    x
+  }))
+  expect_equal(total, per_sum)
+})
+
 test_that("covr-style report keeps DataTables callback valid (no lost backslashes)", {
   skip_if_not_installed("DT")
   skip_if_not_installed("htmltools")

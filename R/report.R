@@ -122,35 +122,46 @@ render_source_table <- function(full, src, source_cols) {
 
     tbody <- htmltools::tags$tbody(lapply(seq_len(NROW(lines)), function(row_num) {
       line_no <- lines[row_num, "line"]
-      coverage <- lines[row_num, "coverage"]
+
+      # Per-line total and per-source counts come from source_coverage(),
+      # which runs covr's own per_line() algorithm per source and then sums
+      # the sources, so the "count" column is always the per-source columns
+      # added together (and never/missed/covered agree across columns).
+      if (has_src && !is.null(sub)) {
+        v <- sub[sub$line == line_no, , drop = FALSE]
+        if (nrow(v) == 1) {
+          coverage <- v$total
+          per_src <- vapply(source_cols, function(sc) {
+            x <- v[[sc]]
+            if (is.na(x)) "" else as.character(x)
+          }, character(1))
+        } else {
+          coverage <- ""
+          per_src <- rep("", length(source_cols))
+        }
+      } else {
+        coverage <- lines[row_num, "coverage"]
+        per_src <- character(0)
+      }
+
       cov_type <- NULL
       if (coverage == 0) {
         cov_value <- "!"
         cov_type <- "missed"
       } else if (coverage > 0) {
-        cov_value <- htmltools::HTML(paste0(lines[row_num, "coverage"],
-                                            "<em>x</em>", collapse = ""))
+        cov_value <- htmltools::HTML(paste0(coverage, "<em>x</em>", collapse = ""))
         cov_type <- "covered"
       } else {
         cov_value <- ""
         cov_type <- "never"
       }
 
-      src_cells <- list()
-      if (has_src) {
-        src_cells <- lapply(source_cols, function(s) {
-          htmltools::tags$td(class = "source-col", "")
+      src_cells <- if (has_src) {
+        lapply(per_src, function(sv) {
+          htmltools::tags$td(class = "source-col", sv)
         })
-        if (coverage != "" && !is.null(sub)) {
-          vals <- sub[sub$line == line_no, source_cols, drop = FALSE]
-          if (nrow(vals) == 1) {
-            src_cells <- lapply(source_cols, function(s) {
-              v <- vals[[s]]
-              if (is.na(v)) v <- 0L
-              htmltools::tags$td(class = "source-col", as.character(v))
-            })
-          }
-        }
+      } else {
+        list()
       }
 
       htmltools::tags$tr(class = cov_type,
@@ -214,7 +225,9 @@ render_report_html_simple <- function(cov, ui, file) {
     if (!file.exists(f)) next
     sub <- df[df$filename == f, , drop = FALSE]
     src_lines <- readLines(f, warn = FALSE)
-    f_covered <- sum(sub$total > 0)
+    total_num <- suppressWarnings(as.numeric(sub$total))
+    total_num[is.na(total_num)] <- 0
+    f_covered <- sum(total_num > 0)
     f_pct <- if (nrow(sub) > 0) round(100 * f_covered / nrow(sub), 1) else 100
     html <- c(html, sprintf("<div class='file'><h3>%s &mdash; %s%%</h3>", f, f_pct))
     for (ln in seq_along(src_lines)) {
@@ -222,10 +235,15 @@ render_report_html_simple <- function(cov, ui, file) {
       names(vals) <- source_cols
       for (s in source_cols) {
         v <- sub[[s]][sub$line == ln]
-        vals[[s]] <- if (length(v) == 0) 0 else v
+        if (length(v) == 0) {
+          vals[[s]] <- 0
+        } else {
+          n <- suppressWarnings(as.numeric(v))
+          vals[[s]] <- if (is.na(n)) 0 else n
+        }
       }
       total <- if (length(source_cols) == 0) {
-        v <- sub$total[sub$line == ln]
+        v <- total_num[sub$line == ln]
         if (length(v) == 0) 0 else v
       } else {
         sum(vals)
@@ -521,10 +539,7 @@ source_counts <- function(cov) {
 source_coverage <- function(cov) {
   sources <- attr(cov, "shinycov_sources", exact = TRUE)
   if (is.null(sources)) {
-    df <- covr::tally_coverage(cov, by = "line")
-    agg <- stats::aggregate(df$value, by = list(filename = df$filename, line = df$line), FUN = min)
-    names(agg)[3] <- "total"
-    return(agg[order(agg$filename, agg$line), ])
+    return(full_line_df(covr:::to_report_data(cov)$full, "total"))
   }
 
   out <- NULL
@@ -532,14 +547,34 @@ source_coverage <- function(cov) {
     env <- reconstruct_counters(sources[[src]])
     cov_s <- build_coverage(env)
     class(cov_s) <- c("coverage", "list")
-    df <- covr::tally_coverage(cov_s, by = "line")
-    agg <- stats::aggregate(df$value, by = list(filename = df$filename, line = df$line), FUN = min)
-    names(agg)[3] <- src
-    out <- if (is.null(out)) agg else merge(out, agg, by = c("filename", "line"), all = TRUE)
+    df_s <- full_line_df(covr:::to_report_data(cov_s)$full, src)
+    out <- if (is.null(out)) df_s else merge(out, df_s, by = c("filename", "line"), all = TRUE)
   }
+
   src_cols <- names(sources)
-  for (s in src_cols) out[[s]][is.na(out[[s]])] <- 0L
-  out$total <- rowSums(out[src_cols])
+  for (s in src_cols) {
+    out[[s]][is.na(out[[s]])] <- ""
+  }
+  # A line is "never" (non-relevant) only when every source reports no value;
+  # otherwise its total is the sum of the per-source hit counts, so the
+  # "count" column always equals the per-source columns added together.
+  never <- Reduce(`&`, lapply(out[src_cols], function(x) x == ""))
+  nums <- lapply(out[src_cols], function(x) {
+    n <- suppressWarnings(as.numeric(x))
+    n[is.na(n)] <- 0
+    n
+  })
+  out$total <- ifelse(never, "", as.character(Reduce(`+`, nums)))
   out[order(out$filename, out$line), , drop = FALSE]
+}
+
+full_line_df <- function(full, colname) {
+  df <- do.call(rbind, lapply(names(full), function(f) {
+    d <- full[[f]]
+    data.frame(filename = f, line = d$line, value = d$coverage,
+               stringsAsFactors = FALSE)
+  }))
+  names(df)[3] <- colname
+  df
 }
 
