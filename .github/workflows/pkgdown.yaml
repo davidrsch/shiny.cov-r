@@ -41,8 +41,11 @@ jobs:
         run: pkgdown::build_site_github_pages(new_process = FALSE, install = TRUE)
         shell: Rscript {0}
 
+      # GitHub Pages cannot be deployed from a private repo on a free plan,
+      # so this step is expected to fail (403) until the repo goes public.
       - name: Deploy to GitHub Pages
         if: github.event_name != 'pull_request'
+        continue-on-error: true
         uses: peaceiris/actions-gh-pages@v3
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
