@@ -10,7 +10,7 @@ shinycov_output_dir(app_dir)
 \item{app_dir}{Path to the Shiny app directory.}
 }
 \value{
-Character path to the `.shiny.cov/` subdirectory.
+Character path to the \verb{.shiny.cov/} subdirectory.
 }
 \description{
 Determine the shiny.cov output directory for a given app directory

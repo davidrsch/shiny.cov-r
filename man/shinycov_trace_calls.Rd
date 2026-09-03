@@ -13,16 +13,16 @@ shinycov_trace_calls(x, parent_functions = NULL, parent_ref = NULL)
 for attribution in the resulting coverage entries.}
 
 \item{parent_ref}{The nearest enclosing srcref, used to impute one for
-children that don't have their own (see `shinycov_impute_srcref()`).}
+children that don't have their own (see \code{shinycov_impute_srcref()}).}
 }
 \value{
-`x`, with counter-increment calls woven in.
+\code{x}, with counter-increment calls woven in.
 }
 \description{
-Walks `x` and wraps every branch/statement that has (or can be given) a
-srcref with a call to `shinycov_count()`, so evaluating the result
+Walks \code{x} and wraps every branch/statement that has (or can be given) a
+srcref with a call to \code{shinycov_count()}, so evaluating the result
 records exactly which branches actually ran -- the same real,
-branch-level tracking `covr::package_coverage()` gives a package, not
+branch-level tracking \code{covr::package_coverage()} gives a package, not
 just "did this expression get reached at all."
 }
 \keyword{internal}

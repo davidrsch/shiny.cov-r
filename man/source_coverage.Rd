@@ -7,14 +7,14 @@
 source_coverage(cov)
 }
 \arguments{
-\item{cov}{A coverage object returned by [collect()].}
+\item{cov}{A coverage object returned by \code{\link[=collect]{collect()}}.}
 }
 \value{
-A `data.frame`, or `NULL` when no per-source data is present.
+A \code{data.frame}, or \code{NULL} when no per-source data is present.
 }
 \description{
-Returns a data frame with one row per measured `(file, line)` and one
-column per test source giving that source's hit count, plus a `total`
+Returns a data frame with one row per measured \verb{(file, line)} and one
+column per test source giving that source's hit count, plus a \code{total}
 column. Requires the coverage object to carry per-source data (see
-[collect()]).
+\code{\link[=collect]{collect()}}).
 }

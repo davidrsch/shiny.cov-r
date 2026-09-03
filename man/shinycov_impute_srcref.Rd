@@ -7,10 +7,10 @@
 shinycov_impute_srcref(x, parent_ref)
 }
 \description{
-`if`/`for`/`while`/`switch` written without braces around their
+\code{if}/\code{for}/\code{while}/\code{switch} written without braces around their
 branches (a common, valid R style) don't get their own srcref from the
 parser the way a brace-delimited block's members do -- this reconstructs one from
-token-level parse data so `shinycov_trace_calls()` can still
+token-level parse data so \code{shinycov_trace_calls()} can still
 instrument each branch individually instead of collapsing the whole
 statement into one counter.
 }

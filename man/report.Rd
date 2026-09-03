@@ -7,13 +7,13 @@
 report(x, file = "coverage-report/index.html", app_dir = ".", ...)
 }
 \arguments{
-\item{x}{A coverage object returned by [collect()].}
+\item{x}{A coverage object returned by \code{\link[=collect]{collect()}}.}
 
-\item{file}{Output `.html` path (default `"coverage-report/index.html"`;
-dependencies are written to a `lib/` directory alongside it).}
+\item{file}{Output \code{.html} path (default \code{"coverage-report/index.html"};
+dependencies are written to a \verb{lib/} directory alongside it).}
 
 \item{app_dir}{Path to the app directory for the UI manifest and
-interaction log. Defaults to `"."`.}
+interaction log. Defaults to \code{"."}.}
 
 \item{...}{Ignored (kept for compatibility).}
 }
@@ -21,11 +21,11 @@ interaction log. Defaults to `"."`.}
 The HTML report path (invisibly).
 }
 \description{
-Produces a covr-style HTML report with a per-file overview (`Files` tab)
-and a per-file source view (`Source` tab). In the source view the hit
+Produces a covr-style HTML report with a per-file overview (\code{Files} tab)
+and a per-file source view (\code{Source} tab). In the source view the hit
 count for every line is annotated with its per-test-source breakdown
-(`2 (cypress=1 shinytest2=1)`) whenever the run was tagged with
-`SHINYCOV_SOURCE`. `x` already has UI interaction coverage merged
-directly into it (see [merge_ui_coverage()]), so
-[covr::percent_coverage(x)] and this report are one blended number.
+(\verb{2 (cypress=1 shinytest2=1)}) whenever the run was tagged with
+\code{SHINYCOV_SOURCE}. \code{x} already has UI interaction coverage merged
+directly into it (see \code{\link[=merge_ui_coverage]{merge_ui_coverage()}}), so
+\code{\link[covr:percent_coverage]{covr::percent_coverage()}} and this report are one blended number.
 }

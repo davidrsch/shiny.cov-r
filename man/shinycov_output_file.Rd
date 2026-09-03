@@ -10,7 +10,7 @@ shinycov_output_file(app_dir)
 \item{app_dir}{Path to the Shiny app directory.}
 }
 \value{
-Character path to `coverage.rds`.
+Character path to \code{coverage.rds}.
 }
 \description{
 Full path to the coverage RDS file

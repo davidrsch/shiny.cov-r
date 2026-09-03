@@ -10,12 +10,12 @@ shinycov_id_srcrefs_file(app_dir)
 \item{app_dir}{Path to the Shiny app directory.}
 }
 \value{
-Character path to `id_srcrefs.rds`.
+Character path to \code{id_srcrefs.rds}.
 }
 \description{
-Written by the `htmltools::tag()` hook in `bootstrap.R` (see there for
-why it's needed); read by `merge_ui_coverage()` in `R/collect.R` as a
+Written by the \code{htmltools::tag()} hook in \code{bootstrap.R} (see there for
+why it's needed); read by \code{merge_ui_coverage()} in \code{R/collect.R} as a
 fallback when literal text search can't locate an id (e.g. computed ids
-built with `paste0()` in a loop).
+built with \code{paste0()} in a loop).
 }
 \keyword{internal}

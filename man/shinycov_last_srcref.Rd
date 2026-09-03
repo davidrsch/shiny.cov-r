@@ -2,15 +2,15 @@
 % Please edit documentation in R/trace.R
 \name{shinycov_last_srcref}
 \alias{shinycov_last_srcref}
-\title{The srcref most recently passed to `shinycov_count()`}
+\title{The srcref most recently passed to \code{shinycov_count()}}
 \usage{
 shinycov_last_srcref()
 }
 \value{
-A `srcref` object, or `NULL` if nothing has been counted yet.
+A \code{srcref} object, or \code{NULL} if nothing has been counted yet.
 }
 \description{
-Used by `bootstrap.R`'s `htmltools::tag()`/`tagAppendAttributes()` hooks
+Used by \code{bootstrap.R}'s \code{htmltools::tag()}/\code{tagAppendAttributes()} hooks
 to attribute a UI element's id to the source line that was executing
 when it was constructed -- see the comments there for the full
 rationale for attributing computed/dynamic ids to a source line.

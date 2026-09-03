@@ -10,10 +10,10 @@ instrument_code(code)
 \item{code}{Character vector of R source lines.}
 }
 \value{
-A list with components `exprs` and `counters`.
+A list with components \code{exprs} and \code{counters}.
 }
 \description{
 Writes the code to a temporary file so that srcref attributes have
-correct file paths, then calls [instrument_file()].
+correct file paths, then calls \code{\link[=instrument_file]{instrument_file()}}.
 }
 \keyword{internal}

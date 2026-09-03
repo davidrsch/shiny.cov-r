@@ -11,15 +11,15 @@ shinycov_set_counters(env)
 }
 \value{
 The previous active counters environment, invisibly (so callers
-  can restore it later).
+can restore it later).
 }
 \description{
-Every `count()` call embedded in instrumented code writes into whatever
+Every \code{count()} call embedded in instrumented code writes into whatever
 environment is currently active here -- swapping it lets
-`instrument_file()` give each file its own isolated counters during
+\code{instrument_file()} give each file its own isolated counters during
 instrumentation (needed so the package's own tests, which call
-`instrument_file()` many times in one R session, don't see each other's
-entries), and lets `bootstrap.R` swap in one permanent, process-wide
+\code{instrument_file()} many times in one R session, don't see each other's
+entries), and lets \code{bootstrap.R} swap in one permanent, process-wide
 environment for the life of a child Shiny process.
 }
 \keyword{internal}

@@ -7,28 +7,28 @@
 run_covr_server()
 }
 \value{
-Never returns under normal operation -- `shiny::runApp()` blocks
-  until the server is stopped (e.g. by Playwright's `webServer`
-  `gracefulShutdown`).
+Never returns under normal operation -- \code{shiny::runApp()} blocks
+until the server is stopped (e.g. by Playwright's \code{webServer}
+\code{gracefulShutdown}).
 }
 \description{
 Reads the app directory and port from
-`SHINYCOV_SERVER_APP_DIR`/`SHINYCOV_SERVER_PORT`. Playwright supplies
-these via the consuming project's `playwright.config.ts` `webServer.env`
-block (see `shiny.cov-playwright`'s README for the exact config block);
-Cypress supplies the same two variables from `shiny.cov-cypress`'s
-`server.js`.
+\code{SHINYCOV_SERVER_APP_DIR}/\code{SHINYCOV_SERVER_PORT}. Playwright supplies
+these via the consuming project's \code{playwright.config.ts} \code{webServer.env}
+block (see \code{shiny.cov-playwright}'s README for the exact config block);
+Cypress supplies the same two variables from \code{shiny.cov-cypress}'s
+\code{server.js}.
 }
 \details{
 Coverage instrumentation itself is activated the same way it already is
-for every other adapter: [setup()] must have already run against
-`app_dir` (writing the `app.R` wrapper that checks `SHINYCOV_OUTPUT` at
-source time), and `SHINYCOV_OUTPUT` must already be set in the
+for every other adapter: \code{\link[=setup]{setup()}} must have already run against
+\code{app_dir} (writing the \code{app.R} wrapper that checks \code{SHINYCOV_OUTPUT} at
+source time), and \code{SHINYCOV_OUTPUT} must already be set in the
 environment this function runs in. That variable is just one more entry
-in the same `webServer.env` block (or `server.js` env), so it's already
-present by the time `shiny::runApp()` below sources the wrapped `app.R`
--- this function doesn't call [setup()] and doesn't set it itself.
-(`R_COVR` is not read; it's kept only for compatibility with older
+in the same \code{webServer.env} block (or \code{server.js} env), so it's already
+present by the time \code{shiny::runApp()} below sources the wrapped \code{app.R}
+-- this function doesn't call \code{\link[=setup]{setup()}} and doesn't set it itself.
+(\code{R_COVR} is not read; it's kept only for compatibility with older
 shiny.cov releases.)
 }
 \keyword{internal}

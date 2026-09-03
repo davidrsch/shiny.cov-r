@@ -7,12 +7,12 @@
 discover_bindings_js_path()
 }
 \value{
-Character path, or `NULL` if not found.
+Character path, or \code{NULL} if not found.
 }
 \description{
-Runs inside a live browser (via `AppDriver$get_js()`, Cypress's
-`cy.window()`, or Playwright's `page.evaluate()`) to discover
-inputs/outputs via Shiny's own `Shiny.inputBindings`/`Shiny.outputBindings`
+Runs inside a live browser (via \code{AppDriver$get_js()}, Cypress's
+\code{cy.window()}, or Playwright's \code{page.evaluate()}) to discover
+inputs/outputs via Shiny's own \code{Shiny.inputBindings}/\code{Shiny.outputBindings}
 registry -- see the script itself for why this generalizes to any widget
 library.
 }

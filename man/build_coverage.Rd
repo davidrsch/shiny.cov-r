@@ -8,16 +8,16 @@ build_coverage(counter_env)
 }
 \arguments{
 \item{counter_env}{Environment with entries keyed by srcref strings,
-each containing `$value` (integer) and `$srcref` (srcref object).}
+each containing \verb{$value} (integer) and \verb{$srcref} (srcref object).}
 }
 \value{
 A coverage list, one element per expression, compatible with
-  all covr reporting functions.
+all covr reporting functions.
 }
 \description{
 Produces a coverage list where each element represents one instrumented
-expression with `$srcref` (8-element numeric srcref) and `$value`
-(integer count). This matches the format `covr::report()`,
-`covr::percent_coverage()`, and `covr::codecov()` expect.
+expression with \verb{$srcref} (8-element numeric srcref) and \verb{$value}
+(integer count). This matches the format \code{covr::report()},
+\code{covr::percent_coverage()}, and \code{covr::codecov()} expect.
 }
 \keyword{internal}

@@ -8,19 +8,19 @@ collect(app_dir = ".", output_file = NULL)
 }
 \arguments{
 \item{app_dir}{Path to the Shiny app directory. Must have been
-previously configured with [setup()]. Defaults to `"."`.}
+previously configured with \code{\link[=setup]{setup()}}. Defaults to \code{"."}.}
 
-\item{output_file}{Direct path to a specific `coverage.rds` file.
-Overrides `app_dir` if provided.}
+\item{output_file}{Direct path to a specific \code{coverage.rds} file.
+Overrides \code{app_dir} if provided.}
 }
 \value{
-A `coverage` object (class `c("coverage", "list")`)
-  compatible with covr's reporting infrastructure.
+A \code{coverage} object (class \code{c("coverage", "list")})
+compatible with covr's reporting infrastructure.
 }
 \description{
-Reads the `coverage.rds` file written by the Shiny child process on
-shutdown and converts it into a standard `covr` coverage object
-compatible with `covr::report()`, `covr::codecov()`, etc.
+Reads the \code{coverage.rds} file written by the Shiny child process on
+shutdown and converts it into a standard \code{covr} coverage object
+compatible with \code{covr::report()}, \code{covr::codecov()}, etc.
 }
 \examples{
 \dontrun{

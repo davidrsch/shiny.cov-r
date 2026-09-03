@@ -10,13 +10,13 @@ shinycov_manifest_snapshots_file(app_dir)
 \item{app_dir}{Path to the Shiny app directory.}
 }
 \value{
-Character path to `manifest-snapshots.json`.
+Character path to \code{manifest-snapshots.json}.
 }
 \description{
-An alternate write-time shape to `manifest.json`: a plain JSON array of
+An alternate write-time shape to \code{manifest.json}: a plain JSON array of
 raw, unmerged manifest snapshots (one per test worker), for an adapter
 that can't coordinate a single merged write across parallel workers and
 instead just accumulates each worker's snapshot independently. See
-[read_manifest_from_path()] for the corresponding read-time merge.
+\code{\link[=read_manifest_from_path]{read_manifest_from_path()}} for the corresponding read-time merge.
 }
 \keyword{internal}

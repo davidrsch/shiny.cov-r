@@ -6,7 +6,7 @@
 #' (`2 (cypress=1 shinytest2=1)`) whenever the run was tagged with
 #' `SHINYCOV_SOURCE`. `x` already has UI interaction coverage merged
 #' directly into it (see [merge_ui_coverage()]), so
-#' [covr::percent_coverage(x)] and this report are one blended number.
+#' [covr::percent_coverage()] and this report are one blended number.
 #'
 #' @param x A coverage object returned by [collect()].
 #' @param file Output `.html` path (default `"coverage-report/index.html"`;
@@ -259,7 +259,7 @@ default_manifest <- function() {
 #' (documented, accepted) ambiguity that remains for a top-level id that
 #' merely *coincides* with a real module's prefix.
 #'
-#' @param m Manifest list (from [load_manifest()]).
+#' @param m Manifest list (from `load_manifest()`).
 #' @param app_dir Path to the app directory.
 #' @return `m`, with `modules` and each input/output's `module` populated.
 #' @keywords internal

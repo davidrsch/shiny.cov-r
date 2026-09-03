@@ -7,7 +7,7 @@
 merge_manifest_snapshots(old, new)
 }
 \arguments{
-\item{old}{Previous manifest list (or `NULL`/empty if none yet).}
+\item{old}{Previous manifest list (or \code{NULL}/empty if none yet).}
 
 \item{new}{Newly-discovered manifest list.}
 }
@@ -15,27 +15,27 @@ merge_manifest_snapshots(old, new)
 Merged manifest list.
 }
 \description{
-`discover-bindings.js` (and its vendored copies used by the Cypress and
-Playwright adapters) already dedupe *within* a single snapshot when one
+\code{discover-bindings.js} (and its vendored copies used by the Cypress and
+Playwright adapters) already dedupe \emph{within} a single snapshot when one
 element matches more than one registered binding, preferring the more
 specific, non-"shiny."-prefixed
 name. But some widget libraries mutate their own element's class list
-after interaction -- `shinyWidgets::pickerInput()` (bootstrap-select) is
+after interaction -- \code{shinyWidgets::pickerInput()} (bootstrap-select) is
 an example: its wrapping
-`.selectpicker` class is present at initial render but gets stripped by
-the library's own JS once `set_inputs()` changes the value, so a
-snapshot taken only *after* interactions can see just the generic
-`shiny.selectInput` match that's left once the more specific one no
+\code{.selectpicker} class is present at initial render but gets stripped by
+the library's own JS once \code{set_inputs()} changes the value, so a
+snapshot taken only \emph{after} interactions can see just the generic
+\code{shiny.selectInput} match that's left once the more specific one no
 longer matches -- not because discovery is wrong, but because the DOM
 genuinely looks different by then. Taking a snapshot at load time too
 (before anything can degrade) and merging across snapshots the same way
--- prefer the more specific type wherever it was seen at *any* point --
+-- prefer the more specific type wherever it was seen at \emph{any} point --
 fixes this without depending on interaction timing.
 }
 \details{
 Coverage merging/interaction tracking are id-based, not type-based, so
 this mislabeling never affected correctness -- only the human-readable
-`type` shown in manifests and `ui_report()`. Still worth fixing since
+\code{type} shown in manifests and \code{ui_report()}. Still worth fixing since
 it's real, not hypothetical.
 }
 \keyword{internal}

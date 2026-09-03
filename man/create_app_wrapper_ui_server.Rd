@@ -9,11 +9,11 @@ create_app_wrapper_ui_server(app_dir, bootstrap_path)
 \arguments{
 \item{app_dir}{Path to the app directory.}
 
-\item{bootstrap_path}{Absolute path to `bootstrap.R`.}
+\item{bootstrap_path}{Absolute path to \code{bootstrap.R}.}
 }
 \description{
-Writes a new `app.R` that sources the bootstrap, then uses
-`source_instrumented()` to load `ui.R` and `server.R`, and
-finally calls `shiny::shinyApp(ui, server)`.
+Writes a new \code{app.R} that sources the bootstrap, then uses
+\code{source_instrumented()} to load \code{ui.R} and \code{server.R}, and
+finally calls \code{shiny::shinyApp(ui, server)}.
 }
 \keyword{internal}

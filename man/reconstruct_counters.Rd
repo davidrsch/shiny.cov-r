@@ -7,10 +7,10 @@
 reconstruct_counters(counters)
 }
 \arguments{
-\item{counters}{Named list of counter entries from `readRDS()`.}
+\item{counters}{Named list of counter entries from \code{readRDS()}.}
 }
 \value{
-An environment suitable for `covr:::as_coverage()`.
+An environment suitable for \code{covr:::as_coverage()}.
 }
 \description{
 Reconstruct a covr-compatible counter environment from a named list

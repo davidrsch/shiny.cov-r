@@ -7,13 +7,13 @@
 setup(app_dir = ".", output_dir = NULL, overwrite_rprofile = FALSE)
 }
 \arguments{
-\item{app_dir}{Path to the Shiny app directory. Defaults to `"."`.}
+\item{app_dir}{Path to the Shiny app directory. Defaults to \code{"."}.}
 
 \item{output_dir}{Directory for coverage output. Defaults to
-`.shiny.cov/` inside `app_dir`.}
+\verb{.shiny.cov/} inside \code{app_dir}.}
 
-\item{overwrite_rprofile}{If `TRUE`, silently overwrite an existing
-`.Rprofile`. Default is `FALSE`. Kept for backwards compatibility.}
+\item{overwrite_rprofile}{If \code{TRUE}, silently overwrite an existing
+\code{.Rprofile}. Default is \code{FALSE}. Kept for backwards compatibility.}
 }
 \value{
 Invisibly returns the path to the output directory.
@@ -22,13 +22,15 @@ Invisibly returns the path to the output directory.
 Prepares a Shiny app directory for coverage collection:
 }
 \details{
-1. Writes the bootstrap script to `.shiny.cov/bootstrap.R`.
-2. Creates an `app.R` wrapper that sources the bootstrap before the
-   original app code, routing file loading through the bootstrap's
-   `source_instrumented()` function which instruments code on-the-fly.
-3. Sets `SHINYCOV_OUTPUT` and `R_COVR=true` environment variables.
-   (`R_COVR` is kept for compatibility with older shiny.cov releases;
-   instrumentation keys off `SHINYCOV_OUTPUT` alone.)
+\enumerate{
+\item Writes the bootstrap script to \code{.shiny.cov/bootstrap.R}.
+\item Creates an \code{app.R} wrapper that sources the bootstrap before the
+original app code, routing file loading through the bootstrap's
+\code{source_instrumented()} function which instruments code on-the-fly.
+\item Sets \code{SHINYCOV_OUTPUT} and \code{R_COVR=true} environment variables.
+(\code{R_COVR} is kept for compatibility with older shiny.cov releases;
+instrumentation keys off \code{SHINYCOV_OUTPUT} alone.)
+}
 }
 \examples{
 \dontrun{

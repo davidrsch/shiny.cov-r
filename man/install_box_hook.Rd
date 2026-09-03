@@ -2,35 +2,35 @@
 % Please edit documentation in R/box_hook.R
 \name{install_box_hook}
 \alias{install_box_hook}
-\title{Patch \{box\}'s internal `load_from_source()` for branch-level coverage}
+\title{Patch \{box\}'s internal \code{load_from_source()} for branch-level coverage}
 \usage{
 install_box_hook()
 }
 \value{
-Invisibly, `TRUE` if the hook was installed, `FALSE` if
-  instrumentation was skipped for any of the reasons above (a `message()`
-  explains which). Any other, genuinely unexpected error during
-  installation is caught and also reported via `message()`, returning
-  `FALSE` rather than propagating.
+Invisibly, \code{TRUE} if the hook was installed, \code{FALSE} if
+instrumentation was skipped for any of the reasons above (a \code{message()}
+explains which). Any other, genuinely unexpected error during
+installation is caught and also reported via \code{message()}, returning
+\code{FALSE} rather than propagating.
 }
 \description{
-Installs a patched `box:::load_from_source()` that routes every box
-module's top-level expressions through [shinycov_trace_calls()] before
+Installs a patched \code{box:::load_from_source()} that routes every box
+module's top-level expressions through \code{\link[=shinycov_trace_calls]{shinycov_trace_calls()}} before
 evaluating them -- the same branch-level instrumentation
-`instrument_file()` applies to plain `source()`d files -- so `covr`
-coverage extends into `\{box\}`/rhino module files, not just the app's own
-top-level `source()`d code.
+\code{instrument_file()} applies to plain \code{source()}d files -- so \code{covr}
+coverage extends into \{box\}/rhino module files, not just the app's own
+top-level \code{source()}d code.
 }
 \details{
-Reads `box`'s and `shiny.cov`'s own state directly; takes no arguments.
+Reads \code{box}'s and \code{shiny.cov}'s own state directly; takes no arguments.
 Meant to be called once per child app process, from
-`inst/bootstrap/bootstrap.R`.
+\code{inst/bootstrap/bootstrap.R}.
 
-Defensive by design: `box:::load_from_source()` is unexported, unversioned
+Defensive by design: \code{box:::load_from_source()} is unexported, unversioned
 internal API. If it isn't found as a function, or its body doesn't match
 the exact shape this patch depends on, instrumentation is skipped (with
-an explanatory `message()`) rather than installing a broken patch or
-silently corrupting module loading -- `box::use()` keeps working either
+an explanatory \code{message()}) rather than installing a broken patch or
+silently corrupting module loading -- \code{box::use()} keeps working either
 way, just without coverage tracking for module files when skipped.
 }
 \keyword{internal}

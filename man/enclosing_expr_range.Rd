@@ -12,11 +12,11 @@ enclosing_expr_range(lines, ln)
 \item{ln}{A 1-based line number.}
 }
 \value{
-`integer(2)` `c(start_line, end_line)`; falls back to `c(ln, ln)`.
+\code{integer(2)} \code{c(start_line, end_line)}; falls back to \code{c(ln, ln)}.
 }
 \description{
-Used to make an untested UI element mark its *whole* widget expression
-(e.g. `ComboBox.shinyInput(ns("kpi_years"), ...)` across several lines),
+Used to make an untested UI element mark its \emph{whole} widget expression
+(e.g. \code{ComboBox.shinyInput(ns("kpi_years"), ...)} across several lines),
 not just the single line the id literal sits on.
 }
 \keyword{internal}

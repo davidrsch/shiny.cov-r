@@ -10,7 +10,7 @@ shinycov_bootstrap_path(app_dir)
 \item{app_dir}{Path to the Shiny app directory.}
 }
 \value{
-Character path to `bootstrap.R`.
+Character path to \code{bootstrap.R}.
 }
 \description{
 Full path to the bootstrap R script

@@ -251,15 +251,13 @@ covr_r <- function(app_dir = ".", ...) {
 #'
 #' Used to embed a manifest-derived UI element id in a `grepl()` pattern
 #' (see `locate_by_text()` inside `merge_ui_coverage()`) without any of its
-#' characters being interpreted as regex syntax. Order matters: the
-#' backslash itself is escaped first, before escaping any of the other
-#' metacharacters below -- escaping in the other order would double-escape
-#' the backslashes those steps introduce.
+#' characters being interpreted as regex syntax. Escapes every base R regex
+#' metacharacter, escaping the backslash itself first so the other escapes
+#' don't double-escape the backslashes they introduce.
 #'
 #' @param x Character scalar.
-#' @return `x` with every base R regex metacharacter (`. \\ | ( ) [ ] \{ \}
-#'   ^ $ * + ?` -- the full extended-regex metacharacter set, see `?regex`)
-#'   escaped, so it matches only as a literal string.
+#' @return `x` with every base R regex metacharacter escaped, so it matches
+#'   only as a literal string. See `?regex` for the full metacharacter set.
 #' @keywords internal
 regex_escape <- function(x) {
   metachars <- c("\\", ".", "|", "(", ")", "[", "]", "{", "}", "^", "$", "*", "+", "?")

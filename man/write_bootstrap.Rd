@@ -12,10 +12,10 @@ write_bootstrap(path, box_modules = TRUE)
 \item{box_modules}{Ignored (kept for backward compatibility).}
 }
 \value{
-Invisibly returns `path`.
+Invisibly returns \code{path}.
 }
 \description{
-Copies the template from `inst/bootstrap/bootstrap.R` to `path`.
-The bootstrap is sourced by the app wrapper created in [setup()].
+Copies the template from \code{inst/bootstrap/bootstrap.R} to \code{path}.
+The bootstrap is sourced by the app wrapper created in \code{\link[=setup]{setup()}}.
 }
 \keyword{internal}

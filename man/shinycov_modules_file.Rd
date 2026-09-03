@@ -10,12 +10,12 @@ shinycov_modules_file(app_dir)
 \item{app_dir}{Path to the Shiny app directory.}
 }
 \value{
-Character path to `modules.rds`.
+Character path to \code{modules.rds}.
 }
 \description{
-Written by the `shiny::moduleServer()` hook in `bootstrap.R`: the set of
-id prefixes that are *actually* module namespace boundaries at runtime,
-as ground truth for `manifest$modules` and each element's `module`
-field (see `apply_module_boundaries()` in `R/report.R`).
+Written by the \code{shiny::moduleServer()} hook in \code{bootstrap.R}: the set of
+id prefixes that are \emph{actually} module namespace boundaries at runtime,
+as ground truth for \code{manifest$modules} and each element's \code{module}
+field (see \code{apply_module_boundaries()} in \code{R/report.R}).
 }
 \keyword{internal}

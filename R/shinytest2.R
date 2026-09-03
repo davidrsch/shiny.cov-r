@@ -88,7 +88,7 @@ log_interaction <- function(selector, action, value = NULL) {
 #' element removed again) can be invisible at both snapshot points and so
 #' silently excluded from the manifest -- not marked uncovered, just
 #' absent, which inflates the apparent completeness of the reported
-#' percentage. Call [discover_manifest()] yourself, mid-test, right after
+#' percentage. Call `discover_manifest()` yourself, mid-test, right after
 #' revealing such elements and before they're removed, to capture them;
 #' see its own `@description` for details.
 #'
@@ -101,7 +101,7 @@ AppDriver <- R6::R6Class(
 
   public = list(
     #' @description Create a new app driver, taking an initial UI manifest
-    #'   snapshot right after the app loads. See [discover_manifest()] for
+    #'   snapshot right after the app loads. See `discover_manifest()` for
     #'   why an early snapshot matters, not just the one taken at `stop()`.
     #' @param ... Passed to `shinytest2::AppDriver$initialize()`.
     initialize = function(...) {

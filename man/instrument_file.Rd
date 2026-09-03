@@ -10,8 +10,8 @@ instrument_file(path)
 \item{path}{Path to an R source file.}
 }
 \value{
-A list with components `exprs` (list of instrumented language
-  objects) and `counters` (environment keyed by srcref keys).
+A list with components \code{exprs} (list of instrumented language
+objects) and \code{counters} (environment keyed by srcref keys).
 }
 \description{
 Parses a file with srcref attributes, wraps every top-level expression

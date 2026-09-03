@@ -10,16 +10,14 @@ regex_escape(x)
 \item{x}{Character scalar.}
 }
 \value{
-`x` with every base R regex metacharacter (`. \\ | ( ) [ ] \{ \}
-  ^ $ * + ?` -- the full extended-regex metacharacter set, see `?regex`)
-  escaped, so it matches only as a literal string.
+\code{x} with every base R regex metacharacter escaped, so it matches
+only as a literal string. See \code{?regex} for the full metacharacter set.
 }
 \description{
-Used to embed a manifest-derived UI element id in a `grepl()` pattern
-(see `locate_by_text()` inside `merge_ui_coverage()`) without any of its
-characters being interpreted as regex syntax. Order matters: the
-backslash itself is escaped first, before escaping any of the other
-metacharacters below -- escaping in the other order would double-escape
-the backslashes those steps introduce.
+Used to embed a manifest-derived UI element id in a \code{grepl()} pattern
+(see \code{locate_by_text()} inside \code{merge_ui_coverage()}) without any of its
+characters being interpreted as regex syntax. Escapes every base R regex
+metacharacter, escaping the backslash itself first so the other escapes
+don't double-escape the backslashes they introduce.
 }
 \keyword{internal}

@@ -10,13 +10,13 @@ app_rprofile_path(app_dir)
 \item{app_dir}{Path to the Shiny app directory.}
 }
 \value{
-Character path to the `.Rprofile` file.
+Character path to the \code{.Rprofile} file.
 }
 \description{
-Always `<app_dir>/.Rprofile` -- deliberately does *not* fall back to
-`R_PROFILE_USER`. That env var is a session-global setting unrelated to
-`app_dir`: honoring it would write the snippet to whatever arbitrary
-file the *calling* process happens to have set (this occurs under R CMD
+Always \verb{<app_dir>/.Rprofile} -- deliberately does \emph{not} fall back to
+\code{R_PROFILE_USER}. That env var is a session-global setting unrelated to
+\code{app_dir}: honoring it would write the snippet to whatever arbitrary
+file the \emph{calling} process happens to have set (this occurs under R CMD
 check's own test harness), not to the app directory the caller passed in.
 }
 \keyword{internal}

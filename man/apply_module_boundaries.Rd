@@ -7,26 +7,26 @@
 apply_module_boundaries(m, app_dir)
 }
 \arguments{
-\item{m}{Manifest list (from [load_manifest()]).}
+\item{m}{Manifest list (from \code{load_manifest()}).}
 
 \item{app_dir}{Path to the app directory.}
 }
 \value{
-`m`, with `modules` and each input/output's `module` populated.
+\code{m}, with \code{modules} and each input/output's \code{module} populated.
 }
 \description{
 The browser-side discovery script can see the "-"-joined id
 strings Shiny puts in the DOM, but can't tell a real module namespace
 boundary hyphen from one an app author just happened to put in a plain
-top-level id -- only the R-side runtime, where `shiny::moduleServer()`
-actually runs, knows that for certain (see the hook in `bootstrap.R`).
+top-level id -- only the R-side runtime, where \code{shiny::moduleServer()}
+actually runs, knows that for certain (see the hook in \code{bootstrap.R}).
 Reads the RDS file that hook writes and, if present, uses it as ground
-truth instead of leaving `modules`/`module` empty or guessed.
+truth instead of leaving \code{modules}/\code{module} empty or guessed.
 }
 \details{
 That ground truth is a flat list of real boundary prefixes, though, not
 a per-id map -- see the corroboration check inside for the residual
 (documented, accepted) ambiguity that remains for a top-level id that
-merely *coincides* with a real module's prefix.
+merely \emph{coincides} with a real module's prefix.
 }
 \keyword{internal}

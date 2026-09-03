@@ -9,16 +9,18 @@ create_app_wrapper(app_dir, bootstrap_path, app_file = "app.R")
 \arguments{
 \item{app_dir}{Path to the app directory.}
 
-\item{bootstrap_path}{Absolute path to `bootstrap.R`.}
+\item{bootstrap_path}{Absolute path to \code{bootstrap.R}.}
 
-\item{app_file}{Name of the app entry point (usually `"app.R"`).}
+\item{app_file}{Name of the app entry point (usually \code{"app.R"}).}
 }
 \description{
-Renames the original `app.R` to `<name>.shinycov_backup` and writes
-a new `app.R` that:
-1. Sources the bootstrap (which swaps counters, defines `instrument_file`
-   and `source_instrumented`)
-2. Calls `source_instrumented()` on the backup to run the original app
-   code through the instrumentation pipeline
+Renames the original \code{app.R} to \verb{<name>.shinycov_backup} and writes
+a new \code{app.R} that:
+\enumerate{
+\item Sources the bootstrap (which swaps counters, defines \code{instrument_file}
+and \code{source_instrumented})
+\item Calls \code{source_instrumented()} on the backup to run the original app
+code through the instrumentation pipeline
+}
 }
 \keyword{internal}

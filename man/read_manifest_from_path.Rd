@@ -7,19 +7,19 @@
 read_manifest_from_path(path)
 }
 \arguments{
-\item{path}{Path to a `manifest.json` or `manifest-snapshots.json` file,
-as returned by [manifest_read_path()].}
+\item{path}{Path to a \code{manifest.json} or \code{manifest-snapshots.json} file,
+as returned by \code{\link[=manifest_read_path]{manifest_read_path()}}.}
 }
 \value{
-The parsed manifest list. Propagates any `jsonlite::fromJSON()`
-  parse error to the caller, same as parsing `manifest.json` directly
-  always has.
+The parsed manifest list. Propagates any \code{jsonlite::fromJSON()}
+parse error to the caller, same as parsing \code{manifest.json} directly
+always has.
 }
 \description{
-A `manifest.json` parses directly into a manifest list, same as always.
-A `manifest-snapshots.json` parses into a JSON array of raw, unmerged
+A \code{manifest.json} parses directly into a manifest list, same as always.
+A \code{manifest-snapshots.json} parses into a JSON array of raw, unmerged
 manifest snapshots -- one per test worker -- which this reduces through
-`merge_manifest_snapshots()`'s existing pairwise merge before returning,
+\code{merge_manifest_snapshots()}'s existing pairwise merge before returning,
 so callers see one manifest list regardless of which shape was on disk.
 Reducing left to right over the array gives the same result as if the
 snapshots had arrived one at a time to a single accumulator, and is
@@ -28,14 +28,14 @@ order-independent for the realistic case the merge algorithm's
 type is merged in, it can never be displaced by a later base/generic
 snapshot, so it doesn't matter which snapshot in the array happened to
 carry it. (It is not order-independent in the degenerate case of two
-snapshots disagreeing on *which* specific type an id has -- whichever
+snapshots disagreeing on \emph{which} specific type an id has -- whichever
 one is merged in first wins. That case doesn't arise from how a single
 widget's DOM degrades over time, the scenario this format exists for.)
 }
 \details{
-An empty snapshot array reduces to `NULL` (`Reduce()`'s behavior on an
-empty list with no `init` supplied) -- callers already treat a `NULL`
-manifest as "nothing to report" wherever they parse `manifest.json`
+An empty snapshot array reduces to \code{NULL} (\code{Reduce()}'s behavior on an
+empty list with no \code{init} supplied) -- callers already treat a \code{NULL}
+manifest as "nothing to report" wherever they parse \code{manifest.json}
 today, so this needs no special-casing here.
 }
 \keyword{internal}

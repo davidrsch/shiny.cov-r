@@ -7,7 +7,7 @@
 bootstrap_template_path()
 }
 \value{
-Character path or `NULL`.
+Character path or \code{NULL}.
 }
 \description{
 Path to the installed bootstrap template

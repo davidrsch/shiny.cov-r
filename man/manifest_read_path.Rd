@@ -11,13 +11,13 @@ manifest_read_path(app_dir)
 }
 \value{
 Character path to whichever manifest file should be read.
-  Existence is not checked here -- callers already do their own
-  `file.exists()` check on the returned path.
+Existence is not checked here -- callers already do their own
+\code{file.exists()} check on the returned path.
 }
 \description{
-`manifest-snapshots.json` takes priority over `manifest.json` when both
+\code{manifest-snapshots.json} takes priority over \code{manifest.json} when both
 are present. In practice an adapter writes one shape or the other, never
 both, but preferring the snapshot file is the conservative choice if a
-stale `manifest.json` from a previous run happens to still be on disk.
+stale \code{manifest.json} from a previous run happens to still be on disk.
 }
 \keyword{internal}

@@ -7,14 +7,14 @@
 covr_r(app_dir = ".", ...)
 }
 \arguments{
-\item{app_dir}{Path to the Shiny app directory. Default `"."`.}
+\item{app_dir}{Path to the Shiny app directory. Default \code{"."}.}
 
-\item{...}{Passed to `shinytest2::test_app()`.}
+\item{...}{Passed to \code{shinytest2::test_app()}.}
 }
 \value{
-A `coverage` object.
+A \code{coverage} object.
 }
 \description{
 One call: sets up instrumentation, runs tests, collects coverage.
-Returns a covr-compatible coverage object ready for `covr::report()`.
+Returns a covr-compatible coverage object ready for \code{covr::report()}.
 }

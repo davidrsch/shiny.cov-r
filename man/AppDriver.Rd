@@ -4,34 +4,34 @@
 \alias{AppDriver}
 \title{Shiny.cov-aware AppDriver}
 \description{
-Wraps [shinytest2::AppDriver] to automatically log UI interactions for
+Wraps \link[shinytest2:AppDriver]{shinytest2::AppDriver} to automatically log UI interactions for
 shiny.cov's UI interaction coverage report. Logged: input mutations
-(`set_inputs()`, `click()`, `upload_file()`), output/value reads
-(`get_text()`, `get_html()`, `get_value()`, `get_values()`,
-`expect_values()`, `wait_for_value()`), and window resizing
-(`set_window_size()`). `run_js()` is also logged, but only as a single
-non-attributable `"window"`/`"run_js"` entry for raw-log visibility --
-see its own `@description` for why it can't be attributed to a specific
-input/output. Any other `shinytest2::AppDriver` method not listed above
-(e.g. navigating pages, taking screenshots) is *not* logged and so is
+(\code{set_inputs()}, \code{click()}, \code{upload_file()}), output/value reads
+(\code{get_text()}, \code{get_html()}, \code{get_value()}, \code{get_values()},
+\code{expect_values()}, \code{wait_for_value()}), and window resizing
+(\code{set_window_size()}). \code{run_js()} is also logged, but only as a single
+non-attributable \code{"window"}/\code{"run_js"} entry for raw-log visibility --
+see its own \verb{@description} for why it can't be attributed to a specific
+input/output. Any other \code{shinytest2::AppDriver} method not listed above
+(e.g. navigating pages, taking screenshots) is \emph{not} logged and so is
 invisible to the coverage report. All methods below forward their
-arguments to the corresponding `shinytest2::AppDriver` method; see that
+arguments to the corresponding \code{shinytest2::AppDriver} method; see that
 class's documentation for full argument semantics. Logging only happens
-after the underlying `shinytest2::AppDriver` call returns successfully --
+after the underlying \code{shinytest2::AppDriver} call returns successfully --
 if it throws, nothing is logged.
 
-**UI manifest limitation**: separately from interaction logging above,
-the *manifest* of which UI elements exist at all (used to compute the
+\strong{UI manifest limitation}: separately from interaction logging above,
+the \emph{manifest} of which UI elements exist at all (used to compute the
 denominator of the coverage percentage) is only snapshotted twice by
-default -- once in `initialize()`, once in `stop()`. Transient UI that
+default -- once in \code{initialize()}, once in \code{stop()}. Transient UI that
 mounts and unmounts entirely within a test (a modal opened and closed,
-a wizard step visited and left, a `conditionalPanel()`/`insertUI()`
+a wizard step visited and left, a \code{conditionalPanel()}/\code{insertUI()}
 element removed again) can be invisible at both snapshot points and so
 silently excluded from the manifest -- not marked uncovered, just
 absent, which inflates the apparent completeness of the reported
-percentage. Call [discover_manifest()] yourself, mid-test, right after
+percentage. Call \code{discover_manifest()} yourself, mid-test, right after
 revealing such elements and before they're removed, to capture them;
-see its own `@description` for details.
+see its own \verb{@description} for details.
 }
 \section{Super class}{
 \code{\link[shinytest2:AppDriver]{shinytest2::AppDriver}} -> \code{shinycovAppDriver}
@@ -83,8 +83,8 @@ see its own `@description` for details.
 \if{latex}{\out{\hypertarget{method-shinycovAppDriver-initialize}{}}}
 \subsection{\code{shinycovAppDriver$new()}}{
   Create a new app driver, taking an initial UI manifest
-  snapshot right after the app loads. See [discover_manifest()] for
-  why an early snapshot matters, not just the one taken at `stop()`.
+snapshot right after the app loads. See \code{discover_manifest()} for
+why an early snapshot matters, not just the one taken at \code{stop()}.
   \subsection{Usage}{
     \if{html}{\out{<div class="r">}}
     \preformatted{shinycovAppDriver$new(...)}
@@ -93,7 +93,7 @@ see its own `@description` for details.
   \subsection{Arguments}{
     \if{html}{\out{<div class="arguments">}}
     \describe{
-      \item{\code{...}}{Passed to `shinytest2::AppDriver$initialize()`.}
+      \item{\code{...}}{Passed to \code{shinytest2::AppDriver$initialize()}.}
     }
     \if{html}{\out{</div>}}
   }
@@ -104,7 +104,7 @@ see its own `@description` for details.
 \if{latex}{\out{\hypertarget{method-shinycovAppDriver-set_inputs}{}}}
 \subsection{\code{shinycovAppDriver$set_inputs()}}{
   Set one or more input values, logging each for the
-  UI interaction coverage report.
+UI interaction coverage report.
   \subsection{Usage}{
     \if{html}{\out{<div class="r">}}
     \preformatted{shinycovAppDriver$set_inputs(..., wait_ = TRUE)}
@@ -113,8 +113,8 @@ see its own `@description` for details.
   \subsection{Arguments}{
     \if{html}{\out{<div class="arguments">}}
     \describe{
-      \item{\code{...}}{Named input values, e.g. `set_inputs(bins = 20)`.}
-      \item{\code{wait_}}{Passed to `shinytest2::AppDriver$set_inputs()`.}
+      \item{\code{...}}{Named input values, e.g. \code{set_inputs(bins = 20)}.}
+      \item{\code{wait_}}{Passed to \code{shinytest2::AppDriver$set_inputs()}.}
     }
     \if{html}{\out{</div>}}
   }
@@ -125,7 +125,7 @@ see its own `@description` for details.
 \if{latex}{\out{\hypertarget{method-shinycovAppDriver-click}{}}}
 \subsection{\code{shinycovAppDriver$click()}}{
   Click an input, an output, or a CSS selector, logging
-  the click.
+the click.
   \subsection{Usage}{
     \if{html}{\out{<div class="r">}}
     \preformatted{shinycovAppDriver$click(
@@ -139,12 +139,12 @@ see its own `@description` for details.
   \subsection{Arguments}{
     \if{html}{\out{<div class="arguments">}}
     \describe{
-      \item{\code{input}}{Id of an input to click (e.g. an `actionButton`).}
+      \item{\code{input}}{Id of an input to click (e.g. an \code{actionButton}).}
       \item{\code{output}}{Id of an output to click (e.g. an interactive plot),
-if not using `input`.}
-      \item{\code{selector}}{CSS selector to click, if not using `input` or
-`output`.}
-      \item{\code{...}}{Passed to `shinytest2::AppDriver$click()`.}
+if not using \code{input}.}
+      \item{\code{selector}}{CSS selector to click, if not using \code{input} or
+\code{output}.}
+      \item{\code{...}}{Passed to \code{shinytest2::AppDriver$click()}.}
     }
     \if{html}{\out{</div>}}
   }
@@ -168,10 +168,10 @@ if not using `input`.}
     \if{html}{\out{<div class="arguments">}}
     \describe{
       \item{\code{...}}{A single named argument identifying the file input and the
-file to upload, e.g. `upload_file(myFileInputId = "path/to/file")`
--- passed to `shinytest2::AppDriver$upload_file()`.}
-      \item{\code{wait_}}{Passed to `shinytest2::AppDriver$upload_file()`.}
-      \item{\code{timeout_}}{Passed to `shinytest2::AppDriver$upload_file()`.}
+file to upload, e.g. \code{upload_file(myFileInputId = "path/to/file")}
+-- passed to \code{shinytest2::AppDriver$upload_file()}.}
+      \item{\code{wait_}}{Passed to \code{shinytest2::AppDriver$upload_file()}.}
+      \item{\code{timeout_}}{Passed to \code{shinytest2::AppDriver$upload_file()}.}
     }
     \if{html}{\out{</div>}}
   }
@@ -182,7 +182,7 @@ file to upload, e.g. `upload_file(myFileInputId = "path/to/file")`
 \if{latex}{\out{\hypertarget{method-shinycovAppDriver-get_text}{}}}
 \subsection{\code{shinycovAppDriver$get_text()}}{
   Read the text content of an output, logging the
-  verification.
+verification.
   \subsection{Usage}{
     \if{html}{\out{<div class="r">}}
     \preformatted{shinycovAppDriver$get_text(selector, ...)}
@@ -192,7 +192,7 @@ file to upload, e.g. `upload_file(myFileInputId = "path/to/file")`
     \if{html}{\out{<div class="arguments">}}
     \describe{
       \item{\code{selector}}{CSS selector of the output.}
-      \item{\code{...}}{Passed to `shinytest2::AppDriver$get_text()`.}
+      \item{\code{...}}{Passed to \code{shinytest2::AppDriver$get_text()}.}
     }
     \if{html}{\out{</div>}}
   }
@@ -203,7 +203,7 @@ file to upload, e.g. `upload_file(myFileInputId = "path/to/file")`
 \if{latex}{\out{\hypertarget{method-shinycovAppDriver-get_html}{}}}
 \subsection{\code{shinycovAppDriver$get_html()}}{
   Read the HTML content of an output, logging the
-  verification.
+verification.
   \subsection{Usage}{
     \if{html}{\out{<div class="r">}}
     \preformatted{shinycovAppDriver$get_html(selector, ...)}
@@ -213,7 +213,7 @@ file to upload, e.g. `upload_file(myFileInputId = "path/to/file")`
     \if{html}{\out{<div class="arguments">}}
     \describe{
       \item{\code{selector}}{CSS selector of the output.}
-      \item{\code{...}}{Passed to `shinytest2::AppDriver$get_html()`.}
+      \item{\code{...}}{Passed to \code{shinytest2::AppDriver$get_html()}.}
     }
     \if{html}{\out{</div>}}
   }
@@ -224,7 +224,7 @@ file to upload, e.g. `upload_file(myFileInputId = "path/to/file")`
 \if{latex}{\out{\hypertarget{method-shinycovAppDriver-get_value}{}}}
 \subsection{\code{shinycovAppDriver$get_value()}}{
   Read the current value of an input, output, or export,
-  logging the verification.
+logging the verification.
   \subsection{Usage}{
     \if{html}{\out{<div class="r">}}
     \preformatted{shinycovAppDriver$get_value(
@@ -239,14 +239,14 @@ file to upload, e.g. `upload_file(myFileInputId = "path/to/file")`
   \subsection{Arguments}{
     \if{html}{\out{<div class="arguments">}}
     \describe{
-      \item{\code{...}}{Passed to `shinytest2::AppDriver$get_value()`.}
+      \item{\code{...}}{Passed to \code{shinytest2::AppDriver$get_value()}.}
       \item{\code{input, output, export}}{Passed to
-`shinytest2::AppDriver$get_value()`. Left at their real defaults
-(rlang's `missing_arg()` sentinel, not `NULL`) when not supplied --
-see the `input`/`output`/`export` note on `get_values()` below for
+\code{shinytest2::AppDriver$get_value()}. Left at their real defaults
+(rlang's \code{missing_arg()} sentinel, not \code{NULL}) when not supplied --
+see the \code{input}/\code{output}/\code{export} note on \code{get_values()} below for
 why. Exactly one of the three must actually be supplied;
-`super$get_value()` itself enforces that and throws otherwise.}
-      \item{\code{hash_images}}{Passed to `shinytest2::AppDriver$get_value()`.}
+\code{super$get_value()} itself enforces that and throws otherwise.}
+      \item{\code{hash_images}}{Passed to \code{shinytest2::AppDriver$get_value()}.}
     }
     \if{html}{\out{</div>}}
   }
@@ -257,9 +257,9 @@ why. Exactly one of the three must actually be supplied;
 \if{latex}{\out{\hypertarget{method-shinycovAppDriver-get_values}{}}}
 \subsection{\code{shinycovAppDriver$get_values()}}{
   Read all current input/output/export values at once
-  (`shinytest2::AppDriver$get_values()`), logging one `get_value`
-  entry per input id and one `get_text` entry per output id present
-  in the result.
+(\code{shinytest2::AppDriver$get_values()}), logging one \code{get_value}
+entry per input id and one \code{get_text} entry per output id present
+in the result.
   \subsection{Usage}{
     \if{html}{\out{<div class="r">}}
     \preformatted{shinycovAppDriver$get_values(
@@ -274,16 +274,16 @@ why. Exactly one of the three must actually be supplied;
   \subsection{Arguments}{
     \if{html}{\out{<div class="arguments">}}
     \describe{
-      \item{\code{...}}{Passed to `shinytest2::AppDriver$get_values()`.}
+      \item{\code{...}}{Passed to \code{shinytest2::AppDriver$get_values()}.}
       \item{\code{input, output, export}}{Passed to
-`shinytest2::AppDriver$get_values()`. Left at their real defaults
-(rlang's `missing_arg()` sentinel, not `NULL`) when not supplied --
+\code{shinytest2::AppDriver$get_values()}. Left at their real defaults
+(rlang's \code{missing_arg()} sentinel, not \code{NULL}) when not supplied --
 these are dynamic-dots arguments in the underlying method, and
-`get_values()`'s own "return everything" default behavior is
+\code{get_values()}'s own "return everything" default behavior is
 conditioned on detecting all three as genuinely missing, not as
-`NULL`. Passing `NULL` here instead would silently turn "get
+\code{NULL}. Passing \code{NULL} here instead would silently turn "get
 everything" into "get nothing".}
-      \item{\code{hash_images}}{Passed to `shinytest2::AppDriver$get_values()`.}
+      \item{\code{hash_images}}{Passed to \code{shinytest2::AppDriver$get_values()}.}
     }
     \if{html}{\out{</div>}}
   }
@@ -294,9 +294,9 @@ everything" into "get nothing".}
 \if{latex}{\out{\hypertarget{method-shinycovAppDriver-expect_values}{}}}
 \subsection{\code{shinycovAppDriver$expect_values()}}{
   Snapshot-test all current input/output/export values
-  (`shinytest2::AppDriver$expect_values()`), logging one `get_value`
-  entry per input id and one `get_text` entry per output id present
-  in the snapshot.
+(\code{shinytest2::AppDriver$expect_values()}), logging one \code{get_value}
+entry per input id and one \code{get_text} entry per output id present
+in the snapshot.
   \subsection{Usage}{
     \if{html}{\out{<div class="r">}}
     \preformatted{shinycovAppDriver$expect_values(
@@ -313,11 +313,11 @@ everything" into "get nothing".}
   \subsection{Arguments}{
     \if{html}{\out{<div class="arguments">}}
     \describe{
-      \item{\code{...}}{Passed to `shinytest2::AppDriver$expect_values()`.}
+      \item{\code{...}}{Passed to \code{shinytest2::AppDriver$expect_values()}.}
       \item{\code{input, output, export, screenshot_args, name, transform}}{Passed to
-`shinytest2::AppDriver$expect_values()`. See the `input`/`output`/
-`export` note on `get_values()` above for why `input`/`output`/
-`export` default to `rlang::missing_arg()`, not `NULL`.}
+\code{shinytest2::AppDriver$expect_values()}. See the \code{input}/\code{output}/
+\code{export} note on \code{get_values()} above for why \code{input}/\code{output}/
+\code{export} default to \code{rlang::missing_arg()}, not \code{NULL}.}
     }
     \if{html}{\out{</div>}}
   }
@@ -328,23 +328,23 @@ everything" into "get nothing".}
 \if{latex}{\out{\hypertarget{method-shinycovAppDriver-wait_for_value}{}}}
 \subsection{\code{shinycovAppDriver$wait_for_value()}}{
   Poll until an input/output/export value satisfies a
-  condition (`shinytest2::AppDriver$wait_for_value()`), logging one
-  entry for whichever specific input or output it targets.
+condition (\code{shinytest2::AppDriver$wait_for_value()}), logging one
+entry for whichever specific input or output it targets.
 
-  `shinytest2::AppDriver$wait_for_value()`'s own implementation polls
-  by calling `self$get_value()` repeatedly (every `interval` ms,
-  R6's `self$` dispatch always resolving to *this* class's own
-  overrides) -- so without suppressing logging during that inner
-  polling loop, one
-  `wait_for_value()` call would log a duplicate entry per poll
-  iteration instead of the single entry documented here. Logging is
-  suppressed for the duration of the underlying call and a single
-  entry is logged afterward instead, based on whichever of
-  `input`/`output` was actually supplied. If `export` was the target
-  instead, nothing is logged -- there's no `export` entry in the
-  shared action vocabulary (`shinycov_input_actions()`/
-  `shinycov_output_actions()` in `R/utils.R`) to log it as, since
-  exports aren't part of the UI manifest coverage tracks.
+\code{shinytest2::AppDriver$wait_for_value()}'s own implementation polls
+by calling \code{self$get_value()} repeatedly (every \code{interval} ms,
+R6's \verb{self$} dispatch always resolving to \emph{this} class's own
+overrides) -- so without suppressing logging during that inner
+polling loop, one
+\code{wait_for_value()} call would log a duplicate entry per poll
+iteration instead of the single entry documented here. Logging is
+suppressed for the duration of the underlying call and a single
+entry is logged afterward instead, based on whichever of
+\code{input}/\code{output} was actually supplied. If \code{export} was the target
+instead, nothing is logged -- there's no \code{export} entry in the
+shared action vocabulary (\code{shinycov_input_actions()}/
+\code{shinycov_output_actions()} in \code{R/utils.R}) to log it as, since
+exports aren't part of the UI manifest coverage tracks.
   \subsection{Usage}{
     \if{html}{\out{<div class="r">}}
     \preformatted{shinycovAppDriver$wait_for_value(
@@ -361,13 +361,13 @@ everything" into "get nothing".}
   \subsection{Arguments}{
     \if{html}{\out{<div class="arguments">}}
     \describe{
-      \item{\code{...}}{Passed to `shinytest2::AppDriver$wait_for_value()`.}
+      \item{\code{...}}{Passed to \code{shinytest2::AppDriver$wait_for_value()}.}
       \item{\code{input, output, export}}{Passed to
-`shinytest2::AppDriver$wait_for_value()`. See the `input`/`output`/
-`export` note on `get_values()` above for why these default to
-`rlang::missing_arg()`, not `NULL`.}
+\code{shinytest2::AppDriver$wait_for_value()}. See the \code{input}/\code{output}/
+\code{export} note on \code{get_values()} above for why these default to
+\code{rlang::missing_arg()}, not \code{NULL}.}
       \item{\code{ignore, timeout, interval}}{Passed to
-`shinytest2::AppDriver$wait_for_value()`.}
+\code{shinytest2::AppDriver$wait_for_value()}.}
     }
     \if{html}{\out{</div>}}
   }
@@ -398,16 +398,16 @@ everything" into "get nothing".}
 \if{latex}{\out{\hypertarget{method-shinycovAppDriver-run_js}{}}}
 \subsection{\code{shinycovAppDriver$run_js()}}{
   Run arbitrary JavaScript in the app's browser session
-  (`shinytest2::AppDriver$run_js()`), e.g. tests that set inputs via
-  `Shiny.setInputValue(...)` directly instead of `set_inputs()`.
-  Logs a single non-attributable entry (selector `"window"`, action
-  `"run_js"`) for raw-log visibility only -- deliberately does *not*
-  attempt to regex-parse `script` to guess which input/output it
-  might target, and `"run_js"` is intentionally *not* included in
-  `shinycov_input_actions()`/`shinycov_output_actions()`
-  (`R/utils.R`), so this entry is never counted as a "hit" on any UI
-  element by `merge_ui_coverage()`. Attributing an arbitrary JS
-  string to a specific element would be guessing, not measuring.
+(\code{shinytest2::AppDriver$run_js()}), e.g. tests that set inputs via
+\code{Shiny.setInputValue(...)} directly instead of \code{set_inputs()}.
+Logs a single non-attributable entry (selector \code{"window"}, action
+\code{"run_js"}) for raw-log visibility only -- deliberately does \emph{not}
+attempt to regex-parse \code{script} to guess which input/output it
+might target, and \code{"run_js"} is intentionally \emph{not} included in
+\code{shinycov_input_actions()}/\code{shinycov_output_actions()}
+(\code{R/utils.R}), so this entry is never counted as a "hit" on any UI
+element by \code{merge_ui_coverage()}. Attributing an arbitrary JS
+string to a specific element would be guessing, not measuring.
   \subsection{Usage}{
     \if{html}{\out{<div class="r">}}
     \preformatted{shinycovAppDriver$run_js(
@@ -422,7 +422,7 @@ everything" into "get nothing".}
     \if{html}{\out{<div class="arguments">}}
     \describe{
       \item{\code{script, ..., file, timeout}}{Passed to
-`shinytest2::AppDriver$run_js()`.}
+\code{shinytest2::AppDriver$run_js()}.}
     }
     \if{html}{\out{</div>}}
   }
@@ -433,30 +433,30 @@ everything" into "get nothing".}
 \if{latex}{\out{\hypertarget{method-shinycovAppDriver-discover_manifest}{}}}
 \subsection{\code{shinycovAppDriver$discover_manifest()}}{
   Discover the live UI manifest (inputs, outputs, tabs,
-  conditional panels) by asking the browser's own
-  `Shiny.inputBindings`/`Shiny.outputBindings` registry what's
-  actually bound on the page -- not by guessing from CSS classes, so
-  this works for any widget library, not just base Shiny. Merges
-  with any previously-written manifest (see
-  [merge_manifest_snapshots()] for why: some widget libraries'
-  distinguishing class/attributes only exist right after render and
-  disappear once the widget's own JS reacts to an interaction, so a
-  single after-the-fact snapshot can undercount specificity).
-  Writes `.shiny.cov/manifest.json`. Called automatically on
-  `initialize()` and by `stop()` -- **but those are only two
-  snapshots in time**, so anything that mounts into the DOM and is
-  unmounted again before `stop()` runs (a `showModal()` dialog closed
-  before the test ends, a wizard step advanced past, a
-  `conditionalPanel()`/`insertUI()` element removed again) is bound
-  at neither snapshot point and so is silently absent from the
-  manifest entirely -- not counted as "uncovered", just excluded,
-  which makes the overall coverage percentage look more complete
-  than it really is. `discover_manifest()` is exposed publicly for
-  exactly this reason: call it yourself, mid-test, right after
-  interacting with any such transient UI and while it's still
-  mounted, e.g. immediately after `showModal()` and before whatever
-  later closes it. Its snapshots merge with prior ones (see above),
-  so calling it more often is always safe, never lossy.
+conditional panels) by asking the browser's own
+\code{Shiny.inputBindings}/\code{Shiny.outputBindings} registry what's
+actually bound on the page -- not by guessing from CSS classes, so
+this works for any widget library, not just base Shiny. Merges
+with any previously-written manifest (see
+\code{\link[=merge_manifest_snapshots]{merge_manifest_snapshots()}} for why: some widget libraries'
+distinguishing class/attributes only exist right after render and
+disappear once the widget's own JS reacts to an interaction, so a
+single after-the-fact snapshot can undercount specificity).
+Writes \code{.shiny.cov/manifest.json}. Called automatically on
+\code{initialize()} and by \code{stop()} -- \strong{but those are only two
+snapshots in time}, so anything that mounts into the DOM and is
+unmounted again before \code{stop()} runs (a \code{showModal()} dialog closed
+before the test ends, a wizard step advanced past, a
+\code{conditionalPanel()}/\code{insertUI()} element removed again) is bound
+at neither snapshot point and so is silently absent from the
+manifest entirely -- not counted as "uncovered", just excluded,
+which makes the overall coverage percentage look more complete
+than it really is. \code{discover_manifest()} is exposed publicly for
+exactly this reason: call it yourself, mid-test, right after
+interacting with any such transient UI and while it's still
+mounted, e.g. immediately after \code{showModal()} and before whatever
+later closes it. Its snapshots merge with prior ones (see above),
+so calling it more often is always safe, never lossy.
   \subsection{Usage}{
     \if{html}{\out{<div class="r">}}
     \preformatted{shinycovAppDriver$discover_manifest()}
@@ -472,7 +472,7 @@ everything" into "get nothing".}
 \if{latex}{\out{\hypertarget{method-shinycovAppDriver-stop}{}}}
 \subsection{\code{shinycovAppDriver$stop()}}{
   Stop the app, discovering the final UI manifest first
-  while the browser session is still alive to ask.
+while the browser session is still alive to ask.
   \subsection{Usage}{
     \if{html}{\out{<div class="r">}}
     \preformatted{shinycovAppDriver$stop(...)}
@@ -481,7 +481,7 @@ everything" into "get nothing".}
   \subsection{Arguments}{
     \if{html}{\out{<div class="arguments">}}
     \describe{
-      \item{\code{...}}{Passed to `shinytest2::AppDriver$stop()`.}
+      \item{\code{...}}{Passed to \code{shinytest2::AppDriver$stop()}.}
     }
     \if{html}{\out{</div>}}
   }

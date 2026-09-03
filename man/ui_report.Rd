@@ -7,7 +7,7 @@
 ui_report(x, interaction_log = NULL, app_dir = ".")
 }
 \arguments{
-\item{x}{A coverage object from [collect()].}
+\item{x}{A coverage object from \code{\link[=collect]{collect()}}.}
 
 \item{interaction_log}{Path to interaction log JSON.}
 
@@ -19,5 +19,5 @@ Invisibly returns a list with UI coverage data.
 \description{
 Shows which Shiny inputs were interacted with, which outputs were
 verified, and which tabs were visited during testing. This is data
-`covr::report()` cannot provide because it only tracks R line execution.
+\code{covr::report()} cannot provide because it only tracks R line execution.
 }

@@ -7,7 +7,7 @@
 eval_instrumented(instrumented, env = parent.frame())
 }
 \arguments{
-\item{instrumented}{Result from [instrument_file()] or [instrument_code()].}
+\item{instrumented}{Result from \code{\link[=instrument_file]{instrument_file()}} or \code{\link[=instrument_code]{instrument_code()}}.}
 
 \item{env}{Environment in which to evaluate the expressions.}
 }

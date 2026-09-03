@@ -12,52 +12,52 @@ merge_ui_coverage(cov, app_dir)
 \item{app_dir}{Path to the app directory.}
 }
 \value{
-`cov` with additional synthetic entries, one per UI manifest
-  element that could be located in the source.
+\code{cov} with additional synthetic entries, one per UI manifest
+element that could be located in the source.
 }
 \description{
-UI-construction code (`ui <- fluidPage(sliderInput("bins", ...), ...)`)
+UI-construction code (\code{ui <- fluidPage(sliderInput("bins", ...), ...)})
 executes unconditionally at app startup, so ordinary R line coverage
 always shows it as "covered" regardless of whether a test ever
 interacted with any particular input/output. Rather than report UI
 interaction as a second, separate metric, this adds one synthetic
 coverage entry per UI element -- keyed to that element's own source
 line, with a value driven by the interaction log instead of execution --
-directly into `cov`, so `covr::percent_coverage()`, `covr::report()`,
-and `covr::to_cobertura()` all reflect server logic and UI interaction
+directly into \code{cov}, so \code{covr::percent_coverage()}, \code{covr::report()},
+and \code{covr::to_cobertura()} all reflect server logic and UI interaction
 as one blended signal.
 }
 \details{
-This relies on how `covr` aggregates per-line coverage
-(`covr:::tally_coverage(..., by = "line")`, what `percent_coverage()`
+This relies on how \code{covr} aggregates per-line coverage
+(\code{covr:::tally_coverage(..., by = "line")}, what \code{percent_coverage()}
 uses by default): entries expand to one row per source line and combine
-with `FUN = min` within each `filename + functions + line` group. A
-same-line, same-`functions` entry with `value = 0` therefore pulls an
-untested element's line down to uncovered via `min()`.
+with \code{FUN = min} within each \code{filename + functions + line} group. A
+same-line, same-\code{functions} entry with \code{value = 0} therefore pulls an
+untested element's line down to uncovered via \code{min()}.
 
-Before that `min()` stage runs, `covr:::as.data.frame.coverage()` calls
-`covr:::merge_values()`, which *sums* the `value` of any two entries
-whose full 8-number srcref tuple, `filename`, and `functions` are all
+Before that \code{min()} stage runs, \code{covr:::as.data.frame.coverage()} calls
+\code{covr:::merge_values()}, which \emph{sums} the \code{value} of any two entries
+whose full 8-number srcref tuple, \code{filename}, and \code{functions} are all
 identical. For a UI element that's a complete, standalone one-line
 statement (the idiomatic Shiny style), a whole-line synthetic srcref can
 be byte-for-byte identical to the real covr entry for that statement, so
-`merge_values()` sums the untested `value = 0` into the real nonzero
-value (`1 + 0 = 1`) before `min()` ever sees two rows -- silently
+\code{merge_values()} sums the untested \code{value = 0} into the real nonzero
+value (\code{1 + 0 = 1}) before \code{min()} ever sees two rows -- silently
 erasing the untested signal. To prevent this, the synthetic entry's
-srcref sets its two "parsed" components (used by `merge_values()`'s
+srcref sets its two "parsed" components (used by \code{merge_values()}'s
 grouping, but with no effect on line placement) to a distinct negative
 sentinel per element -- a value no real parser-produced srcref can take
 -- so it can never be silently summed into another entry.
 
 Known limitation: line-based reporting can only carry one verdict per
 physical line. If two different manifest elements resolve to the same
-line and disagree on tested status, the by-line `min()` correctly (if
+line and disagree on tested status, the by-line \code{min()} correctly (if
 coarsely) marks the line uncovered, but a reader can't tell which
 element was untested from the blended report alone.
-`merge_ui_coverage()` `message()`s when it detects this, pointing at
-`ui_report()`'s per-element table as the disambiguating source of
+\code{merge_ui_coverage()} \code{message()}s when it detects this, pointing at
+\code{ui_report()}'s per-element table as the disambiguating source of
 truth -- except when any colliding element was placed via
-`locate_by_srcref()`'s fallback rather than an exact text match, since
+\code{locate_by_srcref()}'s fallback rather than an exact text match, since
 the fallback can attribute an id to a line it has nothing to do with
 (see that hook's comment in bootstrap.R); in that case the message is
 suppressed rather than asserted with false confidence.

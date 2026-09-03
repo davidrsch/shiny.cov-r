@@ -7,23 +7,25 @@
 cleanup(app_dir = ".", remove_output = TRUE, remove_rprofile_snippet = TRUE)
 }
 \arguments{
-\item{app_dir}{Path to the Shiny app directory. Defaults to `"."`.}
+\item{app_dir}{Path to the Shiny app directory. Defaults to \code{"."}.}
 
-\item{remove_output}{If `TRUE`, remove the `.shiny.cov/` directory.}
+\item{remove_output}{If \code{TRUE}, remove the \verb{.shiny.cov/} directory.}
 
-\item{remove_rprofile_snippet}{If `TRUE`, restore `.Rprofile`.}
+\item{remove_rprofile_snippet}{If \code{TRUE}, restore \code{.Rprofile}.}
 }
 \value{
-Invisibly returns `TRUE`.
+Invisibly returns \code{TRUE}.
 }
 \description{
-Reverses the effects of [setup()]:
+Reverses the effects of \code{\link[=setup]{setup()}}:
 }
 \details{
-1. Restores original `app.R` from `.shinycov_backup`.
-2. Restores `.Rprofile` from backup or removes the snippet.
-3. Removes the `.shiny.cov/` output directory.
-4. Unsets environment variables.
+\enumerate{
+\item Restores original \code{app.R} from \code{.shinycov_backup}.
+\item Restores \code{.Rprofile} from backup or removes the snippet.
+\item Removes the \verb{.shiny.cov/} output directory.
+\item Unsets environment variables.
+}
 }
 \examples{
 \dontrun{
