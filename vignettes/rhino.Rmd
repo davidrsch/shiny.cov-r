@@ -21,7 +21,7 @@ knitr::opts_chunk$set(
 
 There's also a real, existing tool for *part* of this problem: `covr::package_coverage()` (or rhino's own `rhino::covr_r()` wrapper around `covr::file_coverage()`) already gives genuinely exact, real branch-level R coverage for a rhino app's server-side logic -- when tests are written with `shiny::testServer()`, which runs the server function directly in-process with no browser and no separate R process involved. If that's all you need, use `rhino::covr_r()` directly; `shiny.cov` isn't necessary for it and doesn't try to replace it.
 
-Where `rhino::covr_r()` can't help at all is real UI-driven testing -- `shinytest2::AppDriver`, Cypress, or Playwright, which all spawn the Shiny process in a genuinely separate process to serve a real browser. That's exactly the case `shiny.cov` exists for, and it now works for `{box}`/rhino apps too, not just plain `app.R` apps.
+Where `rhino::covr_r()` can't help at all is real UI-driven testing -- `shinytest2::AppDriver`, Cypress, or Playwright, which all spawn the Shiny process in a genuinely separate process to serve a real browser. That's exactly the case `shiny.cov` exists for, and it works for `{box}`/rhino apps too, not just plain `app.R` apps.
 
 ## Setup
 
@@ -49,7 +49,7 @@ Module boundaries (`manifest$modules`, and each element's `module` field) come f
 
 ## Action buttons and other widgets are fully discovered
 
-Earlier versions of `shiny.cov` discovered inputs/outputs by matching Shiny's `shiny-input-container` CSS class in the server-side R tag tree, which `shiny::actionButton()` doesn't use -- so a rhino module's `greet`/`reset` buttons never showed up in the manifest.
+A manifest built by matching Shiny's `shiny-input-container` CSS class in the server-side R tag tree would miss `shiny::actionButton()`, which doesn't carry that class -- so a rhino module's `greet`/`reset` buttons would never show up in a manifest built that way.
 
 The browser-registry discovery described above doesn't have this gap: every real Shiny input, including action buttons, must register with `Shiny.inputBindings` for Shiny's client-server protocol to work at all, so it's found the same way any other input is, with zero special-casing. This also means it isn't limited to base Shiny widgets -- a rhino app using a third-party widget library (`shinyWidgets`, `shiny.fluent`, or any custom `Shiny.inputBindings.register()` call) is discovered the exact same way.
 

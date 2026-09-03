@@ -2,18 +2,16 @@
 # Copyright (c) covr authors: https://github.com/r-lib/covr), not called
 # via covr::: at runtime.
 #
-# Why: shiny.cov previously called covr:::trace_calls()/covr:::count()/
-# covr:::.counters directly (unexported internals, accessed via `:::`,
-# reached by unlockBinding()/lockBinding() gymnastics on covr's own
-# namespace at runtime). That worked, but had two real costs: an
-# unavoidable R CMD check NOTE ("Unexported object imported by a ':::'
-# call"), and a standing fragility risk -- covr doesn't promise these
-# internals stay stable across versions, since they were never part of
-# its public API. Both packages are MIT licensed, so porting this code
+# Why: this engine would otherwise reach into covr's unexported internals
+# (covr:::trace_calls()/covr:::count()/covr:::.counters, with
+# unlockBinding()/lockBinding() gymnastics on covr's namespace). covr
+# doesn't promise those internals stay stable across versions -- they were
+# never part of its public API -- and calling them via `:::` draws an
+# R CMD check NOTE. Both packages are MIT licensed, so porting the code
 # in-tree is permitted; owning it directly also means the counter-swap
-# mechanism below no longer needs any namespace-locking tricks at all
-# (see shinycov_set_counters()), since shiny.cov is now mutating its own
-# state, not reaching into someone else's namespace.
+# mechanism below needs no namespace-locking tricks (see
+# shinycov_set_counters()), because shiny.cov mutates its own state rather
+# than another package's namespace.
 #
 # trace_calls() itself (the core AST-walking algorithm) is ported
 # essentially verbatim; the one deliberate behavioral simplification is

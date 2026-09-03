@@ -7,15 +7,14 @@
 source_counts(cov)
 }
 \arguments{
-\item{cov}{A coverage object returned by \code{\link[=collect]{collect()}}.}
+\item{cov}{A coverage object returned by [collect()].}
 }
 \value{
-A \code{data.frame} with columns \code{source}, \code{expressions}, and \code{hits}.
+A `data.frame` with columns `source`, `expressions`, and `hits`.
 }
 \description{
 Returns a data frame with one row per test source that produced coverage
-(e.g. \code{shinytest2}, \code{cypress}, \code{playwright}), showing the number of tracked
+(e.g. `shinytest2`, `cypress`, `playwright`), showing the number of tracked
 expressions and the total hit count contributed by each source. For a run
-with a single (untagged) source, the only row is \code{total}.
+with a single (untagged) source, the only row is `total`.
 }
-\keyword{internal}

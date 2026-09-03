@@ -2,7 +2,7 @@
 % Please edit documentation in R/server.R
 \name{run_covr_server}
 \alias{run_covr_server}
-\title{Run a Shiny app with coverage instrumentation, for Playwright's webServer}
+\title{Run a Shiny app with coverage instrumentation, for the Cypress/Playwright adapters}
 \usage{
 run_covr_server()
 }
@@ -12,25 +12,23 @@ Never returns under normal operation -- `shiny::runApp()` blocks
   `gracefulShutdown`).
 }
 \description{
-Invoked directly by Playwright's `webServer.command`
-(`Rscript -e "shiny.cov:::run_covr_server()"`) rather than spawned via a
-Node subprocess launcher the way `shiny.cov-cypress`'s `server.js` starts
-one -- this runs *in* the R process Playwright's `webServer` itself
-spawns. Reads the app directory and port from
-`SHINYCOV_SERVER_APP_DIR`/`SHINYCOV_SERVER_PORT`, which the consuming
-project's `playwright.config.ts` sets via `webServer.env` (see
-`shiny.cov-playwright`'s README for the exact config block).
+Reads the app directory and port from
+`SHINYCOV_SERVER_APP_DIR`/`SHINYCOV_SERVER_PORT`. Playwright supplies
+these via the consuming project's `playwright.config.ts` `webServer.env`
+block (see `shiny.cov-playwright`'s README for the exact config block);
+Cypress supplies the same two variables from `shiny.cov-cypress`'s
+`server.js`.
 }
 \details{
 Coverage instrumentation itself is activated the same way it already is
 for every other adapter: [setup()] must have already run against
 `app_dir` (writing the `app.R` wrapper that checks `SHINYCOV_OUTPUT` at
-source time), and `SHINYCOV_OUTPUT`/`R_COVR` must already be set in the
-environment this function runs in. Both are just more entries in the same
-`webServer.env` block, so they're already present by the time
-`shiny::runApp()` below sources the wrapped `app.R` -- this function
-doesn't call [setup()] and doesn't set those two variables itself, the
-same division of responsibility `shiny.cov-cypress`'s `server.js` uses
-for its own static `Rscript -e` command.
+source time), and `SHINYCOV_OUTPUT` must already be set in the
+environment this function runs in. That variable is just one more entry
+in the same `webServer.env` block (or `server.js` env), so it's already
+present by the time `shiny::runApp()` below sources the wrapped `app.R`
+-- this function doesn't call [setup()] and doesn't set it itself.
+(`R_COVR` is not read; it's kept only for compatibility with older
+shiny.cov releases.)
 }
 \keyword{internal}

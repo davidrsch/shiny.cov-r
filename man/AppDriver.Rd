@@ -53,7 +53,6 @@ see its own `@description` for details.
     \item \href{#method-shinycovAppDriver-run_js}{\code{shinycovAppDriver$run_js()}}
     \item \href{#method-shinycovAppDriver-discover_manifest}{\code{shinycovAppDriver$discover_manifest()}}
     \item \href{#method-shinycovAppDriver-stop}{\code{shinycovAppDriver$stop()}}
-    \item \href{#method-shinycovAppDriver-clone}{\code{shinycovAppDriver$clone()}}
   }
 }
 \if{html}{\out{<details><summary>Inherited methods</summary>
@@ -483,25 +482,6 @@ everything" into "get nothing".}
     \if{html}{\out{<div class="arguments">}}
     \describe{
       \item{\code{...}}{Passed to `shinytest2::AppDriver$stop()`.}
-    }
-    \if{html}{\out{</div>}}
-  }
-}
-
-\if{html}{\out{<hr>}}
-\if{html}{\out{<a id="method-shinycovAppDriver-clone"></a>}}
-\if{latex}{\out{\hypertarget{method-shinycovAppDriver-clone}{}}}
-\subsection{\code{shinycovAppDriver$clone()}}{
-  The objects of this class are cloneable with this method.
-  \subsection{Usage}{
-    \if{html}{\out{<div class="r">}}
-    \preformatted{shinycovAppDriver$clone(deep = FALSE)}
-    \if{html}{\out{</div>}}
-  }
-  \subsection{Arguments}{
-    \if{html}{\out{<div class="arguments">}}
-    \describe{
-      \item{\code{deep}}{Whether to make a deep clone.}
     }
     \if{html}{\out{</div>}}
   }

@@ -13,8 +13,7 @@ setup(app_dir = ".", output_dir = NULL, overwrite_rprofile = FALSE)
 `.shiny.cov/` inside `app_dir`.}
 
 \item{overwrite_rprofile}{If `TRUE`, silently overwrite an existing
-`.Rprofile`. Default is `FALSE`.  (Kept for backwards compatibility;
-the primary injection is now the app wrapper.)}
+`.Rprofile`. Default is `FALSE`. Kept for backwards compatibility.}
 }
 \value{
 Invisibly returns the path to the output directory.
@@ -28,6 +27,8 @@ Prepares a Shiny app directory for coverage collection:
    original app code, routing file loading through the bootstrap's
    `source_instrumented()` function which instruments code on-the-fly.
 3. Sets `SHINYCOV_OUTPUT` and `R_COVR=true` environment variables.
+   (`R_COVR` is kept for compatibility with older shiny.cov releases;
+   instrumentation keys off `SHINYCOV_OUTPUT` alone.)
 }
 \examples{
 \dontrun{

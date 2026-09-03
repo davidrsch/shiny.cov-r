@@ -12,14 +12,13 @@ Initial development version.
   just plain `app.R`/`ui.R`+`server.R` apps. The AST-tracing/counting
   engine itself (`R/trace.R`) is ported in-tree from `{covr}` (MIT
   licensed, same as this package) rather than called via `covr:::` at
-  runtime -- shiny.cov no longer depends on covr's internal, unexported
-  API remaining stable across versions, and the counter-swap mechanism no
-  longer needs any namespace-locking tricks at all, since it's mutating
-  its own state rather than reaching into another package's namespace.
-  `{covr}` itself is still a real dependency -- `collect()`/`report()`
-  build their output through its actual public API
-  (`covr::percent_coverage()`, `covr::report()`, `covr::to_cobertura()`),
-  so results stay fully compatible with it and CI coverage services.
+  runtime, so that engine no longer depends on covr's internal, unexported
+  tracing API staying stable across versions, and the counter-swap
+  mechanism needs no namespace-locking tricks -- it mutates shiny.cov's
+  own state. `{covr}` is still a dependency: the result is a standard covr
+  coverage object, so `covr::percent_coverage()`, `covr::report()`, and
+  `covr::to_cobertura()` all work on it and it stays fully compatible
+  with CI coverage services.
 * UI interaction coverage (which inputs/outputs/tabs/conditional panels
   were actually exercised) is merged directly into the same `covr`
   coverage object as R line coverage, so `covr::percent_coverage()`,
@@ -40,26 +39,12 @@ Initial development version.
 * A companion `shiny.cov-cypress` npm package for Cypress-driven tests:
   explicit interaction logging via `cy.shinyCovInteract()`, and a
   `cy.shinyCovDiscoverManifest()` command mirroring the R side's browser
-  registry discovery. There is no automatic logging via overridden
-  `cy.click()`/`cy.type()`/etc. commands -- every variation of that was
-  tried and found fragile in ways only a real Cypress browser run exposed
-  (mocked unit tests, which resolve `cy.task()` synchronously and don't
-  exercise Cypress's real command queue or actionability-retry internals,
-  couldn't catch any of it): an unreturned `cy.task()` call throws
-  "Cypress detected that you returned a promise from a command while also
-  invoking one or more cy commands in that promise"; chaining it before
-  the real command breaks `type()`/`click()`'s own actionability retry
-  ("Cannot read properties of null (reading 'length')"); chaining it
-  after still threw the first error against a real app, consistently,
-  across a full clean reinstall and every browser cache cleared. This
-  matches a long-documented, never fully resolved class of problem in
-  Cypress's own issue tracker for any plugin author overwriting an
-  actionability command. Explicit logging is one extra line per
-  interaction and has been reliable in every real run. The
-  `shinycov-start-and-test` CLI has been removed -- neither real example
-  project built against this package ended up using it (both use
-  `cross-env` directly, which turned out simpler), so it was unnecessary
-  surface area rather than genuine value.
+  registry discovery. Automatic logging via overridden
+  `cy.click()`/`cy.type()`/etc. commands is deliberately not provided:
+  chaining a `cy.task()` call into an overridden actionability command is
+  unreliable in a real Cypress browser run. Explicit logging is one extra
+  line per interaction and is reliable. The `shinycov-start-and-test` CLI
+  is not included -- the example projects use `cross-env` directly.
 * A companion `shiny.cov-playwright` npm package for Playwright-driven
   tests: a `test`/`expect` pair that transparently wraps Playwright's
   `page`/`Locator` objects in a `Proxy`, so every recognized interaction

@@ -18,7 +18,7 @@ Installs a patched `box:::load_from_source()` that routes every box
 module's top-level expressions through [shinycov_trace_calls()] before
 evaluating them -- the same branch-level instrumentation
 `instrument_file()` applies to plain `source()`d files -- so `covr`
-coverage extends into `{box}`/rhino module files, not just the app's own
+coverage extends into `\{box\}`/rhino module files, not just the app's own
 top-level `source()`d code.
 }
 \details{

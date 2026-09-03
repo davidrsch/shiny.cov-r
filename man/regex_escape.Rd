@@ -10,7 +10,7 @@ regex_escape(x)
 \item{x}{Character scalar.}
 }
 \value{
-`x` with every base R regex metacharacter (`. \\ | ( ) [ ] { }
+`x` with every base R regex metacharacter (`. \\ | ( ) [ ] \{ \}
   ^ $ * + ?` -- the full extended-regex metacharacter set, see `?regex`)
   escaped, so it matches only as a literal string.
 }

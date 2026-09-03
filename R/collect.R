@@ -1,25 +1,3 @@
-#' Collect coverage data from a Shiny app test run
-#'
-#' Reads the `coverage.rds` file written by the Shiny child process on
-#' shutdown and converts it into a standard `covr` coverage object
-#' compatible with `covr::report()`, `covr::codecov()`, etc.
-#'
-#' @param app_dir Path to the Shiny app directory. Must have been
-#'   previously configured with [setup()]. Defaults to `"."`.
-#' @param output_file Direct path to a specific `coverage.rds` file.
-#'   Overrides `app_dir` if provided.
-#'
-#' @return A `coverage` object (class `c("coverage", "list")`)
-#'   compatible with covr's reporting infrastructure.
-#'
-#' @export
-#'
-#' @examples
-#' \dontrun{
-#' cov <- shiny.cov::collect("my-shiny-app")
-#' covr::report(cov)
-#' covr::percent_coverage(cov)
-#' }
 shinycov_coverage_files <- function(app_dir) {
   out <- shinycov_output_dir(app_dir)
   if (!dir.exists(out)) return(character(0))
@@ -66,6 +44,28 @@ sum_counters <- function(by_source) {
   out
 }
 
+#' Collect coverage data from a Shiny app test run
+#'
+#' Reads the `coverage.rds` file written by the Shiny child process on
+#' shutdown and converts it into a standard `covr` coverage object
+#' compatible with `covr::report()`, `covr::codecov()`, etc.
+#'
+#' @param app_dir Path to the Shiny app directory. Must have been
+#'   previously configured with [setup()]. Defaults to `"."`.
+#' @param output_file Direct path to a specific `coverage.rds` file.
+#'   Overrides `app_dir` if provided.
+#'
+#' @return A `coverage` object (class `c("coverage", "list")`)
+#'   compatible with covr's reporting infrastructure.
+#'
+#' @export
+#'
+#' @examples
+#' \dontrun{
+#' cov <- shiny.cov::collect("my-shiny-app")
+#' covr::report(cov)
+#' covr::percent_coverage(cov)
+#' }
 collect <- function(app_dir = ".", output_file = NULL) {
   if (is.null(output_file)) {
     files <- shinycov_coverage_files(app_dir)
@@ -257,7 +257,7 @@ covr_r <- function(app_dir = ".", ...) {
 #' the backslashes those steps introduce.
 #'
 #' @param x Character scalar.
-#' @return `x` with every base R regex metacharacter (`. \\ | ( ) [ ] { }
+#' @return `x` with every base R regex metacharacter (`. \\ | ( ) [ ] \{ \}
 #'   ^ $ * + ?` -- the full extended-regex metacharacter set, see `?regex`)
 #'   escaped, so it matches only as a literal string.
 #' @keywords internal
@@ -267,6 +267,57 @@ regex_escape <- function(x) {
     x <- gsub(ch, paste0("\\", ch), x, fixed = TRUE)
   }
   x
+}
+
+#' Find the line range of the smallest enclosing multi-line expression
+#'
+#' Used to make an untested UI element mark its *whole* widget expression
+#' (e.g. `ComboBox.shinyInput(ns("kpi_years"), ...)` across several lines),
+#' not just the single line the id literal sits on.
+#'
+#' @param lines Character vector of source lines.
+#' @param ln A 1-based line number.
+#' @return `integer(2)` `c(start_line, end_line)`; falls back to `c(ln, ln)`.
+#' @keywords internal
+enclosing_expr_range <- function(lines, ln) {
+  pd <- tryCatch(
+    utils::getParseData(parse(text = lines, keep.source = TRUE), includeText = TRUE),
+    error = function(e) NULL
+  )
+  if (is.null(pd)) return(c(ln, ln))
+
+  # Walk up from the string literal(s) on `ln` to the nearest function call
+  # that isn't a namespacing wrapper (`ns`/`NS`). For apps that don't use
+  # modules at all there is no wrapper, so the first enclosing call *is* the
+  # widget and is returned directly. This resolves
+  # `ComboBox.shinyInput(ns("kpi_years"), ...)` to the whole widget while a
+  # single-line `uiOutput(ns("pcghge"))` stays a single line.
+  str_toks <- pd[pd$token == "STR_CONST" & pd$line1 == ln, , drop = FALSE]
+  if (nrow(str_toks) == 0) return(c(ln, ln))
+
+  ranges <- list()
+  for (i in seq_len(nrow(str_toks))) {
+    cur <- str_toks$id[[i]]
+    repeat {
+      par <- pd$parent[pd$id == cur]
+      if (length(par) == 0 || is.na(par[[1]]) || par[[1]] == 0) break
+      par_id <- par[[1]]
+      par_row <- pd[pd$id == par_id, , drop = FALSE]
+      txt <- par_row$text[[1]]
+      if (grepl("(", txt, fixed = TRUE)) {
+        fn <- sub("\\(.*", "", trimws(txt))
+        fn <- sub(".*::", "", fn)
+        fn <- gsub("`", "", fn)
+        if (!(fn %in% c("ns", "NS"))) {
+          ranges[[length(ranges) + 1]] <- c(par_row$line1[[1]], par_row$line2[[1]])
+          break
+        }
+      }
+      cur <- par_id
+    }
+  }
+  if (length(ranges) == 0) return(c(ln, ln))
+  ranges[[which.min(vapply(ranges, function(r) r[[2]] - r[[1]], numeric(1)))]]
 }
 
 #' Merge UI interaction coverage into the same coverage object as R lines
@@ -321,57 +372,6 @@ regex_escape <- function(x) {
 #' @return `cov` with additional synthetic entries, one per UI manifest
 #'   element that could be located in the source.
 #' @keywords internal
-#' Find the line range of the smallest enclosing multi-line expression
-#'
-#' Used to make an untested UI element mark its *whole* widget expression
-#' (e.g. `ComboBox.shinyInput(ns("kpi_years"), ...)` across several lines),
-#' not just the single line the id literal sits on.
-#'
-#' @param lines Character vector of source lines.
-#' @param ln A 1-based line number.
-#' @return `integer(2)` `c(start_line, end_line)`; falls back to `c(ln, ln)`.
-#' @keywords internal
-enclosing_expr_range <- function(lines, ln) {
-  pd <- tryCatch(
-    utils::getParseData(parse(text = lines, keep.source = TRUE), includeText = TRUE),
-    error = function(e) NULL
-  )
-  if (is.null(pd)) return(c(ln, ln))
-
-  # Walk up from the string literal(s) on `ln` to the nearest function call
-  # that isn't a namespacing wrapper (`ns`/`NS`). For apps that don't use
-  # modules at all there is no wrapper, so the first enclosing call *is* the
-  # widget and is returned directly. This resolves
-  # `ComboBox.shinyInput(ns("kpi_years"), ...)` to the whole widget while a
-  # single-line `uiOutput(ns("pcghge"))` stays a single line.
-  str_toks <- pd[pd$token == "STR_CONST" & pd$line1 == ln, , drop = FALSE]
-  if (nrow(str_toks) == 0) return(c(ln, ln))
-
-  ranges <- list()
-  for (i in seq_len(nrow(str_toks))) {
-    cur <- str_toks$id[[i]]
-    repeat {
-      par <- pd$parent[pd$id == cur]
-      if (length(par) == 0 || is.na(par[[1]]) || par[[1]] == 0) break
-      par_id <- par[[1]]
-      par_row <- pd[pd$id == par_id, , drop = FALSE]
-      txt <- par_row$text[[1]]
-      if (grepl("(", txt, fixed = TRUE)) {
-        fn <- sub("\\(.*", "", trimws(txt))
-        fn <- sub(".*::", "", fn)
-        fn <- gsub("`", "", fn)
-        if (!(fn %in% c("ns", "NS"))) {
-          ranges[[length(ranges) + 1]] <- c(par_row$line1[[1]], par_row$line2[[1]])
-          break
-        }
-      }
-      cur <- par_id
-    }
-  }
-  if (length(ranges) == 0) return(c(ln, ln))
-  ranges[[which.min(vapply(ranges, function(r) r[[2]] - r[[1]], numeric(1)))]]
-}
-
 merge_ui_coverage <- function(cov, app_dir) {
   manifest_path <- manifest_read_path(app_dir)
   interactions_path <- file.path(shinycov_output_dir(app_dir), "interactions.json")

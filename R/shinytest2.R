@@ -97,6 +97,7 @@ log_interaction <- function(selector, action, value = NULL) {
 AppDriver <- R6::R6Class(
   "shinycovAppDriver",
   inherit = shinytest2::AppDriver,
+  cloneable = FALSE,
 
   public = list(
     #' @description Create a new app driver, taking an initial UI manifest

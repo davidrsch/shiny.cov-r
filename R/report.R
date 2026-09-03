@@ -40,7 +40,7 @@ report <- function(x, file = "coverage-report/index.html", app_dir = ".", ...) {
 }
 
 render_report_html_covr <- function(cov, ui, file) {
-  data <- covr:::to_report_data(cov)
+  data <- sc_report_to_data(cov)
   src <- source_coverage(cov)
   source_cols <- setdiff(names(src), c("filename", "line", "total"))
 
@@ -73,7 +73,7 @@ render_report_html_covr <- function(cov, ui, file) {
   table$sizingPolicy$defaultHeight <- NULL
 
   source_panel <- if (length(source_cols) > 0) {
-    covr:::tab_panel(
+    sc_report_tab_panel(
       "Source",
       htmltools::tags$label(
         class = "source-col-toggle",
@@ -82,7 +82,7 @@ render_report_html_covr <- function(cov, ui, file) {
         ),
         " show test source columns"
       ),
-      covr:::addHighlight(render_source_table(data$full, src, source_cols)),
+      sc_report_add_highlight(render_source_table(data$full, src, source_cols)),
       htmltools::tags$script(
         "$('#shinycov-toggle-sources').on('change', function() {
            var show = this.checked ? '' : 'none';
@@ -91,17 +91,17 @@ render_report_html_covr <- function(cov, ui, file) {
       )
     )
   } else {
-    covr:::tab_panel("Source", covr:::addHighlight(
+    sc_report_tab_panel("Source", sc_report_add_highlight(
       render_source_table(data$full, src, source_cols)
     ))
   }
 
-  ui_html <- covr:::fluid_page(
+  ui_html <- sc_report_fluid_page(
     htmltools::includeCSS(system.file("www/report.css", package = "covr")),
-    covr:::column(8, offset = 2, size = "md",
+    sc_report_column(8, offset = 2, size = "md",
       htmltools::HTML(paste0("<h2>", pkg, " coverage - ", percentage, "</h2>")),
-      covr:::tabset_panel(
-        covr:::tab_panel("Files", table),
+      sc_report_tabset_panel(
+        sc_report_tab_panel("Files", table),
         source_panel
       )
     )
@@ -464,7 +464,7 @@ source_counts <- function(cov) {
 source_coverage <- function(cov) {
   sources <- attr(cov, "shinycov_sources", exact = TRUE)
   if (is.null(sources)) {
-    return(full_line_df(covr:::to_report_data(cov)$full, "total"))
+    return(full_line_df(sc_report_to_data(cov)$full, "total"))
   }
 
   out <- NULL
@@ -472,7 +472,7 @@ source_coverage <- function(cov) {
     env <- reconstruct_counters(sources[[src]])
     cov_s <- build_coverage(env)
     class(cov_s) <- c("coverage", "list")
-    df_s <- full_line_df(covr:::to_report_data(cov_s)$full, src)
+    df_s <- full_line_df(sc_report_to_data(cov_s)$full, src)
     out <- if (is.null(out)) df_s else merge(out, df_s, by = c("filename", "line"), all = TRUE)
   }
 

@@ -161,7 +161,7 @@ cy.get('#go').click()
 cy.shinyCovInteract('#go', 'click')
 ```
 
-Use one of the recognized action names (`set_inputs`, `click`, `upload_file`, `get_value`, `type`, `select`, `check`, `uncheck` for inputs; `get_text`/`get_html` for output verification) so it's actually counted. There's no automatic logging via overridden `cy.click()`/`cy.type()`/etc. commands -- every attempt at that turned out to be fragile in ways specific to Cypress's own command queue and actionability-retry internals that only a real browser run exposed (see the "Auto-log overrides: removed" comment in `shiny.cov-cypress/src/support.js` for the full history); the explicit call above is the one mechanism that's actually held up.
+Use one of the recognized action names (`set_inputs`, `click`, `upload_file`, `get_value`, `type`, `select`, `check`, `uncheck` for inputs; `get_text`/`get_html` for output verification) so it's actually counted. There's no automatic logging via overridden `cy.click()`/`cy.type()`/etc. commands -- chaining a `cy.task()` call into an overridden actionability command is unreliable in a real Cypress browser run (see the "Auto-log overrides: not implemented" comment in `shiny.cov-cypress/src/support.js`); the explicit call above is the supported mechanism.
 
 The interaction log is written to `.shiny.cov/interactions.json` after the test run and merged into the coverage object by `shiny.cov::collect()`.
 

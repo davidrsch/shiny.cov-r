@@ -7,20 +7,19 @@
 to_cobertura(cov, filename = "cobertura.xml")
 }
 \arguments{
-\item{cov}{A coverage object returned by \code{\link[=collect]{collect()}}.}
+\item{cov}{A coverage object returned by [collect()].}
 
 \item{filename}{Path to write the Cobertura XML to.}
 }
 \value{
-Invisibly returns \code{filename}.
+Invisibly returns `filename`.
 }
 \description{
-Writes a Cobertura XML report for a \code{\link[=collect]{collect()}} coverage object, with a
-single \verb{<line>} entry per physical source line. Unlike
-\code{\link[covr:to_cobertura]{covr::to_cobertura()}}, which writes the same line once per enclosing
-function (its method-level \verb{<lines>} blocks) and is therefore misread by
-some coverage services (e.g. codecov) as 100\% coverage, this collapses
-the tally to one row per \verb{file:line} using the minimum hit count, so
+Writes a Cobertura XML report for a [collect()] coverage object, with a
+single `<line>` entry per physical source line. Unlike
+[covr::to_cobertura()], which writes the same line once per enclosing
+function (its method-level `<lines>` blocks) and is therefore misread by
+some coverage services (e.g. codecov) as 100% coverage, this collapses
+the tally to one row per `file:line` using the minimum hit count, so
 uncovered lines are reported correctly.
 }
-\keyword{internal}

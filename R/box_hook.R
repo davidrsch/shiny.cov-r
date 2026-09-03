@@ -11,14 +11,14 @@
 # instrumented expressions resolve the active counters at call time,
 # which is already the process-wide counters bootstrap.R sets up).
 #
-# This used to live only as inline text inside inst/bootstrap/bootstrap.R
-# (see that file's header for why the rest of its logic stays inline --
-# it delegates everything it can back into the installed package). That
-# meant this particular patch -- the one piece of bootstrap logic that
-# reaches into another package's unexported, unversioned internals -- had
-# no real test coverage: tests could only hand-duplicate an older copy of
-# the logic, not exercise what actually ships. Extracting it here makes it
-# directly callable (and testable) as shiny.cov:::install_box_hook().
+# This lives here as a real, directly testable function
+# (shiny.cov:::install_box_hook()) rather than as inline text inside
+# inst/bootstrap/bootstrap.R (which otherwise delegates to the installed
+# package; see that file's header). The box-module patch is the one piece
+# of bootstrap logic that reaches into another package's unexported,
+# unversioned internals, so it needs direct test coverage -- not tests
+# hand-duplicating a copy of the logic instead of exercising what actually
+# ships.
 #
 # box:::load_from_source() is internal, unexported {box} API with no
 # stability guarantee across versions. Two failure modes matter here and
@@ -46,7 +46,7 @@
 #' module's top-level expressions through [shinycov_trace_calls()] before
 #' evaluating them -- the same branch-level instrumentation
 #' `instrument_file()` applies to plain `source()`d files -- so `covr`
-#' coverage extends into `{box}`/rhino module files, not just the app's own
+#' coverage extends into `\{box\}`/rhino module files, not just the app's own
 #' top-level `source()`d code.
 #'
 #' Reads `box`'s and `shiny.cov`'s own state directly; takes no arguments.
@@ -146,9 +146,9 @@ install_box_hook <- function() {
     box_hook_env$box_eval_instrumented <- box_eval_instrumented
     environment(new_load_from_source) <- box_hook_env
 
-    unlockBinding("load_from_source", box_ns)
+    rlang::env_binding_unlock(box_ns, "load_from_source")
     assign("load_from_source", new_load_from_source, envir = box_ns)
-    lockBinding("load_from_source", box_ns)
+    rlang::env_binding_lock(box_ns, "load_from_source")
 
     invisible(TRUE)
   }, error = function(e) {

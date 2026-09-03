@@ -29,13 +29,13 @@ Imports:
     htmltools,
     jsonlite,
     R6,
+    rlang,
     shiny (>= 1.7.0),
     utils
 Suggests:
     box,
     chromote,
     knitr,
-    rlang,
     rmarkdown,
     shinytest2 (>= 0.3.0),
     shinyWidgets,
