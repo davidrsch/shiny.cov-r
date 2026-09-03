@@ -185,9 +185,10 @@ render_source_table <- function(full, src, source_cols) {
       htmltools::tags$table(class = "table-condensed", thead, tbody))
   }, lines = full, file = names(full)),
   htmltools::tags$style(
-    "#files thead th{position:sticky;top:0;background:#f5f5f5;z-index:1;border-bottom:1px solid #ddd}",
+    "#files thead th{position:sticky;top:1.9em;background:#f5f5f5;z-index:1;border-bottom:1px solid #ddd}",
     "#files th.num,#files th.coverage,#files th.source-col{text-align:right}",
-    "#files td.source-col{text-align:right;min-width:4.5em;padding:0 0.6em}"
+    "#files td.source-col{text-align:right;min-width:4.5em;padding:0 0.6em}",
+    ".source-col-toggle{position:sticky;top:0;z-index:2;background:#fff;display:block;padding:.2em 0}"
   ),
   htmltools::tags$script("$('div#files pre').each(function(i, block) {
     hljs.highlightBlock(block);
