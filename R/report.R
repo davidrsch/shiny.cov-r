@@ -80,7 +80,7 @@ render_report_html_covr <- function(cov, ui, file) {
         htmltools::tags$input(
           type = "checkbox", id = "shinycov-toggle-sources", checked = NA
         ),
-        " show source columns"
+        " show test source columns"
       ),
       covr:::addHighlight(render_source_table(data$full, src, source_cols)),
       htmltools::tags$script(
