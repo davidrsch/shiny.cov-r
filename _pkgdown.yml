@@ -13,6 +13,9 @@ reference:
       - covr_r
       - report
       - ui_report
+      - source_counts
+      - source_coverage
+      - to_cobertura
   - title: shinytest2 integration
     contents:
       - AppDriver
